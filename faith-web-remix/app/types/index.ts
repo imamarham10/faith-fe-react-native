@@ -136,3 +136,24 @@ export interface PrayerStats {
   longestStreak: number;
   completionRate: number;
 }
+
+export interface Emotion {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string;
+}
+
+export interface Remedy {
+  id: string;
+  arabicText: string;
+  transliteration: string;
+  translation: string;
+  source: string;
+}
+
+export interface EmotionDetail extends Emotion {
+  createdAt: string;
+  updatedAt: string;
+  remedies: Remedy[];
+}

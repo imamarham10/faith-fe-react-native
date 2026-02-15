@@ -54,10 +54,10 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
+        // Refresh failed — clear tokens but don't redirect.
+        // Pages handle 401s gracefully; only auth-required features degrade.
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/auth/login';
         return Promise.reject(refreshError);
       }
     }
@@ -155,25 +155,55 @@ export const quranAPI = {
 export const dhikrAPI = {
   getCounters: () =>
     api.get('/api/v1/islam/dhikr/counters'),
-  
+
   createCounter: (name: string, targetCount?: number) =>
     api.post('/api/v1/islam/dhikr/counters', { name, targetCount }),
-  
+
   updateCounter: (id: string, count: number) =>
     api.patch(`/api/v1/islam/dhikr/counters/${id}`, { count }),
-  
+
   deleteCounter: (id: string) =>
     api.delete(`/api/v1/islam/dhikr/counters/${id}`),
-  
+
   createGoal: (counterId: string, targetCount: number, period: 'daily' | 'weekly' | 'monthly') =>
     api.post('/api/v1/islam/dhikr/goals', { counterId, targetCount, period }),
-  
+
   getGoals: () =>
     api.get('/api/v1/islam/dhikr/goals'),
-  
+
   getStats: () =>
     api.get('/api/v1/islam/dhikr/stats'),
-  
+
   getHistory: () =>
     api.get('/api/v1/islam/dhikr/history'),
+};
+
+export const qiblaAPI = {
+  getDirection: (lat: number, lng: number) =>
+    api.get('/api/v1/islam/qibla', { params: { lat, lng } }),
+};
+
+export const namesAPI = {
+  getAllNames: () =>
+    api.get('/api/v1/islam/names/allah'),
+
+  getNameById: (id: number) =>
+    api.get(`/api/v1/islam/names/allah/${id}`),
+
+  getDailyName: () =>
+    api.get('/api/v1/islam/names/daily'),
+
+  addFavorite: (nameId: number) =>
+    api.post('/api/v1/islam/names/favorites', { nameId }),
+
+  getFavorites: () =>
+    api.get('/api/v1/islam/names/favorites'),
+};
+
+export const feelingsAPI = {
+  getAllEmotions: () =>
+    api.get('/api/v1/islam/feelings'),
+
+  getEmotionDetails: (emotion: string) =>
+    api.get(`/api/v1/islam/feelings/${emotion}`),
 };

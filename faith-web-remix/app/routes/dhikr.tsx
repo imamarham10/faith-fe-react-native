@@ -1,208 +1,483 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, RotateCcw, Save, Trash2, Loader2 } from 'lucide-react';
-import { dhikrAPI } from '../services/api';
-import type { DhikrCounter } from '../types';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Plus, RotateCcw, Trash2, Loader2, Moon, Target } from "lucide-react";
+import { dhikrAPI } from "~/services/api";
+import { useAuth } from "~/contexts/AuthContext";
+import type { DhikrCounter } from "~/types";
+
+const PRESET_DHIKR = [
+  { name: "SubhanAllah", arabic: "سُبْحَانَ اللَّهِ", target: 33 },
+  { name: "Alhamdulillah", arabic: "الْحَمْدُ لِلَّهِ", target: 33 },
+  { name: "Allahu Akbar", arabic: "اللَّهُ أَكْبَرُ", target: 34 },
+  { name: "La ilaha illallah", arabic: "لَا إِلَٰهَ إِلَّا اللَّهُ", target: 100 },
+  { name: "Astaghfirullah", arabic: "أَسْتَغْفِرُ اللَّهَ", target: 100 },
+];
 
 export default function DhikrPage() {
+  const { user } = useAuth();
   const [counters, setCounters] = useState<DhikrCounter[]>([]);
-  const [activeCounter, setActiveCounter] = useState<DhikrCounter | null>(null);
+  const [active, setActive] = useState<DhikrCounter | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  const fetchCounters = async () => {
+  const [localCount, setLocalCount] = useState(0);
+  const [pulse, setPulse] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newTarget, setNewTarget] = useState(33);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const fetchCounters = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await dhikrAPI.getCounters();
-      setCounters(response.data);
-      if (response.data.length > 0 && !activeCounter) {
-        setActiveCounter(response.data[0]);
+      const res = await dhikrAPI.getCounters();
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setCounters(data);
+      if (data.length > 0 && !active) {
+        setActive(data[0]);
+        setLocalCount(data[0].count || 0);
       }
-    } catch (error) {
-      console.error('Failed to fetch counters', error);
+    } catch {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchCounters();
-  }, []);
+  }, [fetchCounters]);
 
-  const handleIncrement = async () => {
-    if (!activeCounter) return;
-    
-    const newCount = activeCounter.count + 1;
-    const target = activeCounter.targetCount || 33; // Default target
-    
-    if (newCount <= target) {
-      // Optimistic update
-      const updated = { ...activeCounter, count: newCount };
-      setActiveCounter(updated);
-      setCounters(prev => prev.map(c => c.id === updated.id ? updated : c));
-      
-      try {
-        // Debounce could be added here in a real app
-        await dhikrAPI.updateCounter(activeCounter.id, newCount);
-      } catch (error) {
-        console.error('Failed to update counter', error);
-        // Revert on failure
-        setActiveCounter(activeCounter);
-        fetchCounters();
+  const handleIncrement = () => {
+    if (!active) return;
+    const target = active.targetCount || 33;
+    const next = localCount + 1;
+    if (next > target) return;
+
+    setLocalCount(next);
+    setPulse(true);
+    setTimeout(() => setPulse(false), 200);
+
+    // Debounce API call
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (user) {
+        dhikrAPI.updateCounter(active.id, next).catch(() => {});
+        setCounters((prev) =>
+          prev.map((c) => (c.id === active.id ? { ...c, count: next } : c))
+        );
       }
-    }
+    }, 500);
   };
 
   const handleReset = async () => {
-    if (!activeCounter) return;
-    
-    const updated = { ...activeCounter, count: 0 };
-    setActiveCounter(updated);
-    setCounters(prev => prev.map(c => c.id === updated.id ? updated : c));
-    
-    try {
-      await dhikrAPI.updateCounter(activeCounter.id, 0);
-    } catch (error) {
-      console.error('Failed to reset counter', error);
-      fetchCounters();
+    if (!active) return;
+    setLocalCount(0);
+    if (user) {
+      try {
+        await dhikrAPI.updateCounter(active.id, 0);
+        setCounters((prev) =>
+          prev.map((c) => (c.id === active.id ? { ...c, count: 0 } : c))
+        );
+      } catch {}
     }
   };
-  
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
+
+  const handleDelete = async (id: string) => {
+    if (!user) return;
     try {
       await dhikrAPI.deleteCounter(id);
-      setCounters(prev => prev.filter(c => c.id !== id));
-      if (activeCounter?.id === id) {
-        setActiveCounter(null);
+      setCounters((prev) => prev.filter((c) => c.id !== id));
+      if (active?.id === id) {
+        setActive(null);
+        setLocalCount(0);
       }
-    } catch (error) {
-       console.error('Failed to delete counter', error);
-    }
+    } catch {}
   };
 
-  const handleCreate = async () => {
-      const name = prompt("Enter Dhikr name:");
-      if (!name) return;
-      
-      try {
-          const res = await dhikrAPI.createCounter(name, 33);
-          setCounters(prev => [...prev, res.data]);
-          setActiveCounter(res.data);
-      } catch(error) {
-          console.error("Failed to create counter", error);
-      }
-  }
+  const handleCreate = async (name: string, target: number) => {
+    if (!user || !name.trim()) return;
+    try {
+      const res = await dhikrAPI.createCounter(name, target);
+      const newCounter = res.data?.data || res.data;
+      setCounters((prev) => [...prev, newCounter]);
+      setActive(newCounter);
+      setLocalCount(0);
+      setShowCreate(false);
+      setNewName("");
+      setNewTarget(33);
+    } catch {}
+  };
 
-  // Fallback UI if no counters
-  if (!loading && counters.length === 0 && !activeCounter) {
-     return (
-         <div className="glass rounded-2xl p-10 text-center">
-             <h2 className="text-2xl font-bold text-white font-quicksand mb-4">Start Your Dhikr Journey</h2>
-             <button onClick={handleCreate} className="bg-gold hover:bg-gold-light text-white px-6 py-3 rounded-full font-bold transition-all">
-                 Create First Counter
-             </button>
-         </div>
-     )
-  }
+  const selectCounter = (counter: DhikrCounter) => {
+    setActive(counter);
+    setLocalCount(counter.count || 0);
+  };
 
-  const currentCount = activeCounter?.count || 0;
-  const currentTarget = activeCounter?.targetCount || 33;
-  const progress = (currentCount / currentTarget) * 100;
-  const colors = ['from-blue-400 to-blue-600', 'from-green-400 to-green-600', 'from-red-400 to-red-600', 'from-purple-400 to-purple-600'];
+  const target = active?.targetCount || 33;
+  const progress = Math.min((localCount / target) * 100, 100);
+  const circumference = 2 * Math.PI * 90;
+  const dashOffset = circumference - (progress / 100) * circumference;
+
+  // Guest mode with local counter
+  if (!user) {
+    return <GuestDhikr />;
+  }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
-      {/* Main Counter */}
-      <div className="glass rounded-[3rem] p-8 md:p-12 text-center relative overflow-hidden transition-all duration-300">
+    <div className="bg-gradient-surface min-h-screen">
+      {/* Hero */}
+      <section className="bg-hero-gradient text-white pattern-islamic">
+        <div className="container-faith py-10 md:py-14 text-center">
+          <div className="animate-fade-in-up">
+            <Moon size={28} className="text-gold-light mx-auto mb-4" />
+            <h1 className="text-3xl sm:text-4xl font-bold font-playfair mb-2">
+              Dhikr Counter
+            </h1>
+            <p className="text-white/60 text-sm">
+              Remember Allah with every breath
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="container-faith py-8 md:py-12 max-w-4xl mx-auto">
         {loading ? (
-            <div className="flex justify-center py-20">
-                <Loader2 className="w-10 h-10 animate-spin text-white/30" />
-            </div>
-        ) : activeCounter ? (
-            <>
-                {/* Background Radial Progress */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
-                <div 
-                    className="w-96 h-96 rounded-full border-[20px] border-gold transform rotate-[-90deg]"
-                    style={{
-                    clipPath: `polygon(0 0, 100% 0, 100% 100%, 0 100%)` 
-                    }}
-                />
-                </div>
-
-                <h1 className="text-4xl font-bold text-white font-quicksand mb-8">{activeCounter.name}</h1>
-                
-                <button
-                onClick={handleIncrement}
-                className="w-64 h-64 md:w-80 md:h-80 rounded-full glass border-4 border-white/10 mx-auto flex flex-col items-center justify-center group active:scale-95 transition-all duration-200 hover:border-gold/30 shadow-2xl relative"
-                >
-                <div className="absolute inset-0 rounded-full border-4 border-gold transition-all duration-300" style={{ clipPath: `inset(${100 - progress}% 0 0 0)` }} />
-                
-                <span className="text-8xl md:text-9xl font-bold text-white font-quicksand drop-shadow-lg z-10 select-none">
-                    {currentCount}
-                </span>
-                <span className="text-white/40 font-montserrat mt-2 z-10">
-                    Target: {currentTarget}
-                </span>
-                </button>
-
-                <div className="flex justify-center space-x-6 mt-10">
-                <button 
-                    onClick={handleReset}
-                    className="p-4 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all hover:rotate-[-180deg] duration-500"
-                >
-                    <RotateCcw className="w-6 h-6" />
-                </button>
-                
-                <button className="p-4 rounded-full bg-gold hover:bg-gold-light text-white shadow-lg hover:shadow-gold/20 hover:scale-110 transition-all">
-                    <Save className="w-6 h-6" />
-                </button>
-                </div>
-            </>
+          <div className="flex flex-col items-center py-20">
+            <Loader2 size={32} className="animate-spin text-primary mb-3" />
+            <p className="text-text-muted text-sm">Loading counters...</p>
+          </div>
         ) : (
-            <div className="py-20 text-white/50">Select or create a counter</div>
+          <>
+            {/* Main Counter */}
+            {active ? (
+              <div className="card-elevated p-8 sm:p-12 text-center mb-8 animate-fade-in-up">
+                <p className="text-sm font-semibold text-primary mb-1">{active.name}</p>
+                {active.nameArabic && (
+                  <p className="font-amiri text-lg text-text-secondary mb-6" dir="rtl">
+                    {active.nameArabic}
+                  </p>
+                )}
+
+                {/* Circular Counter */}
+                <div className="relative inline-flex items-center justify-center mb-8">
+                  <svg width="220" height="220" className="transform -rotate-90">
+                    <circle
+                      cx="110"
+                      cy="110"
+                      r="90"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="6"
+                      className="text-border-light"
+                    />
+                    <circle
+                      cx="110"
+                      cy="110"
+                      r="90"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="6"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={dashOffset}
+                      strokeLinecap="round"
+                      className="text-primary progress-ring-circle"
+                    />
+                  </svg>
+
+                  <button
+                    onClick={handleIncrement}
+                    className={`absolute inset-0 flex flex-col items-center justify-center select-none transition-transform ${
+                      pulse ? "scale-95" : ""
+                    }`}
+                    disabled={localCount >= target}
+                  >
+                    <span
+                      className={`text-6xl sm:text-7xl font-bold text-text tabular-nums ${
+                        pulse ? "animate-count-pulse" : ""
+                      }`}
+                    >
+                      {localCount}
+                    </span>
+                    <span className="text-xs text-text-muted mt-1">
+                      of {target}
+                    </span>
+                  </button>
+                </div>
+
+                <p className="text-sm text-text-muted mb-6">
+                  Tap the counter to increment
+                </p>
+
+                {/* Actions */}
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={handleReset}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-black/[0.03] text-text-secondary hover:bg-black/[0.06] text-sm font-medium transition-colors"
+                  >
+                    <RotateCcw size={15} />
+                    Reset
+                  </button>
+                </div>
+
+                {localCount >= target && (
+                  <div className="mt-6 p-4 rounded-xl bg-success/10 text-success text-sm font-medium">
+                    Target reached! MashaAllah!
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="card-elevated p-12 text-center mb-8">
+                <Moon size={40} className="text-text-muted mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-text mb-2">
+                  No counter selected
+                </h3>
+                <p className="text-sm text-text-muted mb-4">
+                  Create or select a dhikr counter to start
+                </p>
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="btn-primary"
+                >
+                  <Plus size={16} />
+                  Create Counter
+                </button>
+              </div>
+            )}
+
+            {/* Counters List */}
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Your Counters</h2>
+                <p className="section-subtitle">
+                  {counters.length} counter{counters.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="btn-secondary text-sm py-2 px-4"
+              >
+                <Plus size={14} />
+                New
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 stagger-children">
+              {counters.map((counter) => {
+                const ct = counter.targetCount || 33;
+                const cp = Math.min((counter.count / ct) * 100, 100);
+                const isActive = active?.id === counter.id;
+                return (
+                  <button
+                    key={counter.id}
+                    onClick={() => selectCounter(counter)}
+                    className={`card p-5 text-left transition-all ${
+                      isActive
+                        ? "ring-2 ring-primary ring-offset-2"
+                        : "hover:border-border"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-text">
+                        {counter.name}
+                      </h3>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(counter.id);
+                        }}
+                        className="p-1.5 rounded-lg hover:bg-error/10 text-text-muted hover:text-error transition-colors"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-border-light h-2 rounded-full overflow-hidden mb-2">
+                      <div
+                        className="bg-primary h-full rounded-full transition-all duration-500"
+                        style={{ width: `${cp}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-text-muted">
+                      <span>
+                        {counter.count} / {ct}
+                      </span>
+                      <span>{Math.round(cp)}%</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Create Modal */}
+            {showCreate && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                onClick={() => setShowCreate(false)}
+              >
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+                <div
+                  className="relative bg-surface rounded-2xl shadow-xl w-full max-w-md p-6 animate-slide-down"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h3 className="text-lg font-semibold text-text mb-5">
+                    New Dhikr Counter
+                  </h3>
+
+                  {/* Presets */}
+                  <p className="text-xs text-text-muted mb-2 uppercase tracking-wider font-semibold">
+                    Quick Start
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 mb-5">
+                    {PRESET_DHIKR.map((p) => (
+                      <button
+                        key={p.name}
+                        onClick={() => handleCreate(p.name, p.target)}
+                        className="card p-3 text-left hover:border-primary/20 transition-colors"
+                      >
+                        <p className="text-sm font-semibold text-text">{p.name}</p>
+                        <p className="font-amiri text-sm text-text-muted" dir="rtl">
+                          {p.arabic}
+                        </p>
+                        <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1">
+                          <Target size={10} /> {p.target}x
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom */}
+                  <p className="text-xs text-text-muted mb-2 uppercase tracking-wider font-semibold">
+                    Or Custom
+                  </p>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      placeholder="Dhikr name"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="input-field"
+                    />
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        placeholder="Target"
+                        value={newTarget}
+                        onChange={(e) => setNewTarget(Number(e.target.value))}
+                        className="input-field"
+                        min={1}
+                      />
+                      <button
+                        onClick={() => handleCreate(newName, newTarget)}
+                        disabled={!newName.trim()}
+                        className="btn-primary shrink-0 disabled:opacity-50"
+                      >
+                        Create
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setShowCreate(false)}
+                    className="mt-4 w-full text-center text-sm text-text-muted hover:text-text py-2"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
+    </div>
+  );
+}
 
-      {/* Saved Counters */}
-      <div>
-        <h2 className="text-xl font-bold text-white mb-4 px-4 font-quicksand">Your Dhikr Goals</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {counters.map((dhikr, idx) => (
-            <div 
-                key={dhikr.id} 
-                onClick={() => setActiveCounter(dhikr)}
-                className={`glass p-5 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group border ${activeCounter?.id === dhikr.id ? 'border-gold/50 bg-white/5' : 'border-transparent'}`}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${colors[idx % colors.length]} opacity-80`} />
-                <button 
-                    onClick={(e) => handleDelete(e, dhikr.id)}
-                    className="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-              <h3 className="text-lg font-bold text-white mb-1">{dhikr.name}</h3>
-              <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
-                <div 
-                  className="bg-white h-full transition-all duration-500" 
-                  style={{ width: `${(dhikr.count / (dhikr.targetCount || 33)) * 100}%` }} 
-                />
-              </div>
-              <div className="flex justify-between mt-2 text-xs text-white/40 font-montserrat">
-                <span>{dhikr.count} / {dhikr.targetCount || 33}</span>
-                <span>{Math.round((dhikr.count / (dhikr.targetCount || 33)) * 100)}%</span>
-              </div>
-            </div>
-          ))}
-          
-          <button 
-            onClick={handleCreate}
-            className="glass p-5 rounded-2xl border-2 border-dashed border-white/10 hover:border-gold/30 hover:bg-white/5 transition-all flex flex-col items-center justify-center text-white/40 hover:text-gold-light h-full min-h-[160px]"
-          >
-            <Plus className="w-8 h-8 mb-2" />
-            <span className="font-bold">New Goal</span>
-          </button>
+function GuestDhikr() {
+  const [count, setCount] = useState(0);
+  const [target] = useState(33);
+  const [pulse, setPulse] = useState(false);
+
+  const progress = Math.min((count / target) * 100, 100);
+  const circumference = 2 * Math.PI * 90;
+  const dashOffset = circumference - (progress / 100) * circumference;
+
+  const handleTap = () => {
+    if (count >= target) return;
+    setCount((c) => c + 1);
+    setPulse(true);
+    setTimeout(() => setPulse(false), 200);
+  };
+
+  return (
+    <div className="bg-gradient-surface min-h-screen">
+      <section className="bg-hero-gradient text-white pattern-islamic">
+        <div className="container-faith py-10 md:py-14 text-center">
+          <Moon size={28} className="text-gold-light mx-auto mb-4" />
+          <h1 className="text-3xl sm:text-4xl font-bold font-playfair mb-2">
+            Dhikr Counter
+          </h1>
+          <p className="text-white/60 text-sm">
+            Remember Allah with every breath
+          </p>
         </div>
+      </section>
+
+      <div className="container-faith py-8 md:py-12 max-w-md mx-auto">
+        <div className="card-elevated p-8 sm:p-12 text-center animate-fade-in-up">
+          <p className="font-amiri text-xl text-text-secondary mb-6" dir="rtl">
+            سُبْحَانَ اللَّهِ
+          </p>
+
+          <div className="relative inline-flex items-center justify-center mb-8">
+            <svg width="220" height="220" className="transform -rotate-90">
+              <circle
+                cx="110" cy="110" r="90" fill="none"
+                stroke="currentColor" strokeWidth="6" className="text-border-light"
+              />
+              <circle
+                cx="110" cy="110" r="90" fill="none"
+                stroke="currentColor" strokeWidth="6"
+                strokeDasharray={circumference} strokeDashoffset={dashOffset}
+                strokeLinecap="round" className="text-primary progress-ring-circle"
+              />
+            </svg>
+            <button
+              onClick={handleTap}
+              className={`absolute inset-0 flex flex-col items-center justify-center select-none transition-transform ${
+                pulse ? "scale-95" : ""
+              }`}
+            >
+              <span className={`text-6xl font-bold text-text tabular-nums ${pulse ? "animate-count-pulse" : ""}`}>
+                {count}
+              </span>
+              <span className="text-xs text-text-muted mt-1">of {target}</span>
+            </button>
+          </div>
+
+          <p className="text-sm text-text-muted mb-4">Tap to count</p>
+
+          <button
+            onClick={() => setCount(0)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-black/[0.03] text-text-secondary hover:bg-black/[0.06] text-sm font-medium transition-colors mx-auto"
+          >
+            <RotateCcw size={15} />
+            Reset
+          </button>
+
+          {count >= target && (
+            <div className="mt-6 p-4 rounded-xl bg-success/10 text-success text-sm font-medium">
+              Target reached! MashaAllah!
+            </div>
+          )}
+        </div>
+
+        <p className="text-center text-sm text-text-muted mt-6">
+          <a href="/auth/login" className="text-primary font-medium hover:underline">
+            Sign in
+          </a>{" "}
+          to save your counters and track progress
+        </p>
       </div>
     </div>
   );

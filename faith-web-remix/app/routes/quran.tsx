@@ -1,102 +1,143 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Book, Bookmark, PlayCircle, Loader2 } from 'lucide-react';
-import { quranAPI } from '../services/api';
-import type { Surah } from '../types';
+import { useState, useEffect } from "react";
+import { Link } from "react-router";
+import { Search, BookOpen, Loader2, MapPin, ChevronRight } from "lucide-react";
+import { quranAPI } from "~/services/api";
+import type { Surah } from "~/types";
 
 export default function QuranPage() {
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const fetchSurahs = async () => {
-      try {
-        const response = await quranAPI.getSurahs();
-        setSurahs(response.data);
-      } catch (error) {
-        console.error('Failed to fetch surahs', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSurahs();
+    quranAPI
+      .getSurahs()
+      .then((res) => {
+        const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+        setSurahs(data);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  const filteredSurahs = surahs.filter(surah => 
-    surah.nameTransliteration.toLowerCase().includes(search.toLowerCase()) ||
-    surah.nameArabic.includes(search) ||
-    String(surah.id).includes(search)
+  const filtered = surahs.filter(
+    (s) =>
+      s.nameTransliteration?.toLowerCase().includes(search.toLowerCase()) ||
+      s.nameArabic?.includes(search) ||
+      String(s.id).includes(search)
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="glass rounded-2xl p-8 text-center relative overflow-hidden">
-        {/* ... header content ... */}
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-forest/20 to-transparent pointer-events-none" />
-        <Book className="w-16 h-16 text-white/20 mx-auto mb-4" />
-        <h1 className="text-4xl font-bold font-quicksand text-white mb-2">
-          The Noble Quran
-        </h1>
-        <p className="text-white/60 font-montserrat max-w-2xl mx-auto">
-          Read, listen, and reflect upon the words of Allah
-        </p>
+    <div className="bg-gradient-surface min-h-screen">
+      {/* Hero */}
+      <section className="bg-hero-warm text-white pattern-islamic">
+        <div className="container-faith py-10 md:py-16 text-center">
+          <div className="animate-fade-in-up">
+            <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-5">
+              <BookOpen size={28} className="text-gold-light" />
+            </div>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-playfair mb-3">
+              The Noble Quran
+            </h1>
+            <p className="text-white/60 text-base max-w-lg mx-auto mb-8">
+              Read, reflect, and find guidance in the words of Allah
+            </p>
 
-        {/* Search Bar */}
-        <div className="mt-8 max-w-xl mx-auto relative group">
-          <div className="absolute inset-0 bg-gold/20 rounded-full blur-xl group-hover:bg-gold/30 transition-all opacity-50" />
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-            <input
-              type="text"
-              placeholder="Search by Surah name or number..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-black/40 backdrop-blur-xl border border-white/10 rounded-full py-4 pl-12 pr-6 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-gold/50 transition-all shadow-xl"
-            />
+            {/* Search */}
+            <div className="max-w-xl mx-auto relative">
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40"
+              />
+              <input
+                type="text"
+                placeholder="Search by Surah name or number..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="input-with-left-icon w-full bg-white/10 backdrop-blur-xl border border-white/15 rounded-2xl py-3.5 pr-5 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all text-sm"
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-10 h-10 animate-spin text-white/30" />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredSurahs.map((surah) => (
-            <div 
-              key={surah.id}
-              className="glass p-4 rounded-xl hover:bg-white/10 transition-all group cursor-pointer border border-transparent hover:border-gold/20"
+      <div className="container-faith py-8 md:py-12">
+        {/* Surah Count */}
+        <div className="flex items-center justify-between mb-6">
+          <p className="text-sm text-text-secondary">
+            {loading ? "Loading..." : `${filtered.length} Surahs`}
+          </p>
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="text-sm text-primary font-medium"
             >
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-10 h-10 rounded-full bg-forest/20 flex items-center justify-center text-forest-light font-bold font-quicksand group-hover:bg-forest/30 transition-colors">
-                  {surah.id}
-                </div>
-                <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                   <button className="p-2 hover:bg-white/10 rounded-full text-white/60 hover:text-white transition-colors">
-                     <PlayCircle className="w-5 h-5" />
-                   </button>
-                   <button className="p-2 hover:bg-white/10 rounded-full text-white/60 hover:text-white transition-colors">
-                     <Bookmark className="w-5 h-5" />
-                   </button>
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-end">
-                <div>
-                  <h3 className="text-lg font-bold text-white font-quicksand">{surah.nameTransliteration}</h3>
-                  <p className="text-xs text-white/50 font-montserrat">{surah.revelationPlace}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-amiri text-gold-light mb-1">{surah.nameArabic}</p>
-                  <p className="text-xs text-white/40">{surah.versesCount} Ayahs</p>
-                </div>
-              </div>
-            </div>
-          ))}
+              Clear search
+            </button>
+          )}
         </div>
-      )}
+
+        {loading ? (
+          <div className="flex flex-col items-center py-20">
+            <Loader2 size={32} className="animate-spin text-primary mb-3" />
+            <p className="text-text-muted text-sm">Loading Surahs...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="card p-8 text-center">
+            <p className="text-text-secondary">No surahs found for "{search}"</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 stagger-children">
+            {filtered.map((surah) => (
+              <Link
+                key={surah.id}
+                to={`/quran/${surah.id}`}
+                className="card p-4 sm:p-5 group flex items-center gap-4 hover:border-primary/20"
+              >
+                {/* Number */}
+                <div className="w-11 h-11 rounded-xl bg-primary/8 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
+                  <span className="text-sm font-bold text-primary">
+                    {surah.id}
+                  </span>
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-[0.9375rem] font-semibold text-text group-hover:text-primary transition-colors">
+                    {surah.nameTransliteration || surah.name}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-text-muted">
+                      {surah.versesCount} Ayahs
+                    </span>
+                    {surah.revelationPlace && (
+                      <>
+                        <span className="text-text-muted">·</span>
+                        <span className="text-xs text-text-muted flex items-center gap-1">
+                          <MapPin size={10} />
+                          {surah.revelationPlace}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Arabic Name */}
+                <div className="text-right shrink-0">
+                  <p className="font-amiri text-lg text-text leading-none">
+                    {surah.nameArabic}
+                  </p>
+                </div>
+
+                <ChevronRight
+                  size={16}
+                  className="text-text-muted shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

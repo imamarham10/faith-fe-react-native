@@ -5,6 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
 } from "react-router";
 
 import type { Route } from "./+types/root";
@@ -15,17 +16,12 @@ import { NotificationProvider } from "./contexts/NotificationContext";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 
-
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
     rel: "preconnect",
     href: "https://fonts.gstatic.com",
     crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
 ];
 
@@ -35,10 +31,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#1B6B4E" />
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className="font-jakarta bg-bg text-text antialiased">
         <LanguageProvider>
           <NotificationProvider>
             <AuthProvider>
@@ -54,17 +51,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const location = useLocation();
+  const isAuthPage = location.pathname.startsWith("/auth");
+
+  if (isAuthPage) {
+    return <Outlet />;
+  }
+
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-amber-400/8 from-5% via-neutral-800 via-25% to-neutral-800 overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-6">
-        <div className="flex flex-col space-y-3 sm:space-y-4 md:space-y-6">
-          <Header />
-          <main className="flex-1">
-            <Outlet />
-          </main>
-          <Footer />
-        </div>
-      </div>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-1">
+        <Outlet />
+      </main>
+      <Footer />
     </div>
   );
 }
@@ -86,14 +86,19 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <main className="pt-16 p-4 container mx-auto">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
-          <code>{stack}</code>
-        </pre>
-      )}
-    </main>
+    <div className="min-h-screen flex items-center justify-center bg-bg p-6">
+      <div className="text-center max-w-md">
+        <div className="text-6xl font-bold text-gradient-primary font-playfair mb-4">{message}</div>
+        <p className="text-text-secondary text-lg mb-8">{details}</p>
+        <a href="/" className="btn-primary inline-flex">
+          Go Home
+        </a>
+        {stack && (
+          <pre className="mt-8 text-left text-xs p-4 bg-surface rounded-xl overflow-x-auto border border-border-light">
+            <code>{stack}</code>
+          </pre>
+        )}
+      </div>
+    </div>
   );
 }

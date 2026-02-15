@@ -1,25 +1,25 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Loader2, ArrowRight, Mail, Lock, KeyRound } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Loader2, ArrowRight, Mail, Lock, KeyRound, BookOpen, Moon, Compass } from "lucide-react";
+import { useAuth } from "~/contexts/AuthContext";
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-export default function Login() {
+export default function LoginPage() {
   const { login, loginWithOTP, requestOTP, isLoading } = useAuth();
   const navigate = useNavigate();
-  const [useOTP, setUseOTP] = React.useState(false);
-  const [otpSent, setOtpSent] = React.useState(false);
-  const [error, setError] = React.useState('');
-  const [otp, setOtp] = React.useState('');
+  const [useOTP, setUseOTP] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [error, setError] = useState("");
+  const [otp, setOtp] = useState("");
 
   const {
     register,
@@ -30,188 +30,295 @@ export default function Login() {
     resolver: zodResolver(loginSchema),
   });
 
-  const email = watch('email');
+  const email = watch("email");
 
   const onLogin = async (data: LoginForm) => {
     try {
-      setError('');
+      setError("");
       await login(data.email, data.password);
-      navigate('/');
+      navigate("/");
     } catch (err: any) {
-      if (err.response?.status === 401) {
-        setError('Invalid email or password');
-      } else {
-        setError('An error occurred. Please try again.');
-        console.error(err);
-      }
+      setError(
+        err.response?.status === 401
+          ? "Invalid email or password"
+          : "An error occurred. Please try again."
+      );
     }
   };
 
   const handleSendOTP = async () => {
     if (!email || errors.email) {
-      setError('Please enter a valid email address first');
+      setError("Please enter a valid email first");
       return;
     }
-
     try {
-      setError('');
+      setError("");
       await requestOTP(email);
       setOtpSent(true);
-    } catch (err) {
-      setError('Failed to send OTP. Please try again.');
+    } catch {
+      setError("Failed to send OTP");
     }
   };
 
   const handleVerifyOTP = async () => {
     if (!otp || otp.length < 6) {
-      setError('Please enter a valid 6-digit OTP');
+      setError("Please enter a valid 6-digit OTP");
       return;
     }
-
     try {
-      setError('');
+      setError("");
       await loginWithOTP(email, otp);
-      navigate('/');
-    } catch (err) {
-      setError('Invalid OTP. Please try again.');
+      navigate("/");
+    } catch {
+      setError("Invalid OTP");
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[80vh]">
-      <div className="glass w-full max-w-md p-8 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-300">
-        <h2 className="text-3xl font-bold text-white text-center mb-2 font-quicksand">
-          Welcome Back
-        </h2>
-        <p className="text-white/60 text-center mb-8 font-montserrat text-sm">
-          Sign in to your account
-        </p>
+    <div className="min-h-screen flex">
+      {/* Left Panel — Decorative */}
+      <div className="hidden lg:flex lg:w-[45%] bg-hero-gradient relative overflow-hidden">
+        {/* Geometric pattern overlay */}
+        <div className="absolute inset-0 pattern-islamic opacity-30" />
+        <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-black/20" />
 
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-200 text-sm p-3 rounded-lg mb-6 text-center">
-            {error}
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-sm border border-white/10">
+              <span className="text-white text-xl font-bold">F</span>
+            </div>
+            <span className="text-white text-lg font-bold">FaithApp</span>
+          </Link>
+
+          {/* Main Message */}
+          <div className="max-w-sm">
+            <h2 className="text-4xl font-bold font-playfair text-white mb-4 leading-tight">
+              Welcome back to your spiritual journey
+            </h2>
+            <p className="text-white/60 text-base leading-relaxed mb-8">
+              Continue your path with prayer tracking, Quran reading, and dhikr — all in one place.
+            </p>
+
+            {/* Feature pills */}
+            <div className="flex flex-wrap gap-2">
+              {[
+                { icon: BookOpen, label: "Quran Reader" },
+                { icon: Moon, label: "Dhikr Counter" },
+                { icon: Compass, label: "Qibla Finder" },
+              ].map(({ icon: Icon, label }) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/10 rounded-full px-3.5 py-2 text-white/70 text-xs"
+                >
+                  <Icon size={13} />
+                  {label}
+                </div>
+              ))}
+            </div>
           </div>
-        )}
 
-        {!useOTP ? (
-          <form onSubmit={handleSubmit(onLogin)} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-white/80 text-sm font-medium ml-1">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                <input
-                  {...register('email')}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-10 py-3 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-gold/50 transition-all"
-                  placeholder="Enter your email"
-                />
-              </div>
-              {errors.email && (
-                <p className="text-red-300 text-xs ml-1">{errors.email.message}</p>
-              )}
+          {/* Bottom Quote */}
+          <div className="border-t border-white/10 pt-6">
+            <p className="font-amiri text-white/40 text-base" dir="rtl">
+              بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel — Form */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-bg">
+        <div className="w-full max-w-[420px] animate-fade-in-up">
+          {/* Mobile Logo */}
+          <Link to="/" className="lg:hidden flex items-center gap-2.5 mb-10">
+            <div className="w-9 h-9 rounded-xl bg-hero-gradient flex items-center justify-center">
+              <span className="text-white text-base font-bold">F</span>
             </div>
+            <span className="text-lg font-bold text-text">FaithApp</span>
+          </Link>
 
-            <div className="space-y-2">
-              <label className="text-white/80 text-sm font-medium ml-1">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                <input
-                  {...register('password')}
-                  type="password"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-10 py-3 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-gold/50 transition-all"
-                  placeholder="Enter your password"
-                />
-              </div>
-              {errors.password && (
-                <p className="text-red-300 text-xs ml-1">{errors.password.message}</p>
-              )}
+          <h1 className="text-2xl sm:text-3xl font-bold text-text font-playfair mb-1.5">
+            Sign In
+          </h1>
+          <p className="text-text-secondary text-sm mb-8">
+            Welcome back. Enter your credentials to continue.
+          </p>
+
+          {error && (
+            <div className="bg-error/8 border border-error/15 text-error text-sm px-4 py-3 rounded-xl mb-6 flex items-start gap-2">
+              <span className="shrink-0 mt-0.5">!</span>
+              <span>{error}</span>
             </div>
+          )}
 
-            <button
-              type="submit"
-              disabled={isSubmitting || isLoading}
-              className="w-full bg-gradient-to-r from-gold to-gold-light text-white font-bold py-3 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-            >
-              {isSubmitting || isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+          {!useOTP ? (
+            <form onSubmit={handleSubmit(onLogin)} className="space-y-5">
+              <div>
+                <label className="text-sm font-medium text-text mb-1.5 block">Email</label>
+                <div className="relative">
+                  <Mail
+                    size={16}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
+                  />
+                  <input
+                    {...register("email")}
+                    className="input-field input-with-left-icon w-full"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-error text-xs mt-1.5">{errors.email.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-text mb-1.5 block">Password</label>
+                <div className="relative">
+                  <Lock
+                    size={16}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
+                  />
+                  <input
+                    {...register("password")}
+                    type="password"
+                    className="input-field input-with-left-icon w-full"
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                  />
+                </div>
+                {errors.password && (
+                  <p className="text-error text-xs mt-1.5">{errors.password.message}</p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || isLoading}
+                className="btn-primary w-full py-3 disabled:opacity-50"
+              >
+                {isSubmitting || isLoading ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <>
+                    Sign In
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+            </form>
+          ) : (
+            <div className="space-y-5">
+              {!otpSent ? (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-text mb-1.5 block">Email</label>
+                    <div className="relative">
+                      <Mail
+                        size={16}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
+                      />
+                      <input
+                        {...register("email")}
+                        className="input-field input-with-left-icon w-full"
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleSendOTP}
+                    disabled={isLoading}
+                    className="btn-primary w-full py-3 disabled:opacity-50"
+                  >
+                    {isLoading ? <Loader2 size={18} className="animate-spin" /> : "Send OTP"}
+                  </button>
+                </>
               ) : (
                 <>
-                  <span>Sign In</span>
-                  <ArrowRight className="w-5 h-5" />
+                  <div>
+                    <label className="text-sm font-medium text-text mb-1.5 block">
+                      Enter OTP sent to {email}
+                    </label>
+                    <div className="relative">
+                      <KeyRound
+                        size={16}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
+                      />
+                      <input
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                        className="input-field input-with-left-icon w-full tracking-[0.3em] text-center text-lg"
+                        placeholder="000000"
+                        maxLength={6}
+                      />
+                    </div>
+                    <p className="text-xs text-text-muted mt-2">
+                      Didn't receive it?{" "}
+                      <button
+                        onClick={handleSendOTP}
+                        className="text-primary font-medium hover:underline"
+                      >
+                        Resend
+                      </button>
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleVerifyOTP}
+                    disabled={isLoading}
+                    className="btn-primary w-full py-3 disabled:opacity-50"
+                  >
+                    {isLoading ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <>
+                        Verify & Sign In
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
                 </>
               )}
-            </button>
-          </form>
-        ) : (
-          <div className="space-y-4">
-            {!otpSent ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-white/80 text-sm font-medium ml-1">Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                    <input
-                      value={email}
-                      onChange={(e) => {
-                        register('email').onChange(e);
-                      }}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-10 py-3 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-gold/50 transition-all"
-                      placeholder="Enter your email"
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={handleSendOTP}
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-gold to-gold-light text-white font-bold py-3 rounded-xl hover:scale-[1.02] transition-all flex items-center justify-center"
-                >
-                  {isLoading ? <Loader2 className="animate-spin" /> : 'Send OTP'}
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-white/80 text-sm font-medium ml-1">Enter OTP</label>
-                  <div className="relative">
-                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                    <input
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-10 py-3 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-gold/50 transition-all tracking-widest text-center text-xl"
-                      placeholder="••••••"
-                      maxLength={6}
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={handleVerifyOTP}
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-gold to-gold-light text-white font-bold py-3 rounded-xl hover:scale-[1.02] transition-all flex items-center justify-center"
-                >
-                  {isLoading ? <Loader2 className="animate-spin" /> : 'Verify & Login'}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        <div className="mt-6 space-y-3">
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border-light" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-bg px-3 text-xs text-text-muted">or</span>
+            </div>
+          </div>
+
           <button
             onClick={() => {
-                setUseOTP(!useOTP);
-                setError('');
-                setOtpSent(false);
+              setUseOTP(!useOTP);
+              setError("");
+              setOtpSent(false);
             }}
-            className="w-full text-white/60 text-sm hover:text-white transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-text-secondary border border-border-light hover:border-primary/30 hover:text-primary transition-all"
           >
-            {useOTP ? 'Login with Password' : 'Login with OTP'}
+            {useOTP ? (
+              <>
+                <Lock size={15} />
+                Sign in with Password
+              </>
+            ) : (
+              <>
+                <KeyRound size={15} />
+                Sign in with OTP
+              </>
+            )}
           </button>
-          
-          <div className="flex items-center justify-center space-x-1 text-sm text-white/60">
-            <span>Don't have an account?</span>
-            <Link to="/auth/register" className="text-gold-light hover:text-gold font-bold transition-colors">
-              Sign Up
+
+          <p className="text-center text-sm text-text-secondary mt-8">
+            Don't have an account?{" "}
+            <Link to="/auth/register" className="text-primary font-semibold hover:underline">
+              Create Account
             </Link>
-          </div>
+          </p>
         </div>
       </div>
     </div>

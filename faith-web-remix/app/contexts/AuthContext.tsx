@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { authAPI } from '../services/api';
-import type { User, AuthResponse } from '../types';
+import type { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -26,7 +26,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (token) {
         try {
           const response = await authAPI.getProfile();
-          setUser(response.data);
+          setUser(response.data?.data || response.data?.user || response.data);
         } catch (error) {
           // Token is invalid, clear it
           localStorage.removeItem('accessToken');
@@ -41,19 +41,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string) => {
     const response = await authAPI.login(email, password);
-    const data: AuthResponse = response.data;
-    
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
+    const data: any = response.data?.data || response.data;
+
+    const accessToken = data.accessToken || data.access_token;
+    const refreshToken = data.refreshToken || data.refresh_token;
+    if (accessToken) localStorage.setItem('accessToken', accessToken);
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
     setUser(data.user);
   };
 
   const register = async (email: string, password: string, fullName: string) => {
     const response = await authAPI.register(email, password, fullName);
-    const data: AuthResponse = response.data;
-    
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
+    const data: any = response.data?.data || response.data;
+
+    const accessToken = data.accessToken || data.access_token;
+    const refreshToken = data.refreshToken || data.refresh_token;
+    if (accessToken) localStorage.setItem('accessToken', accessToken);
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
     setUser(data.user);
   };
 
@@ -63,10 +67,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const loginWithOTP = async (email: string, otp: string) => {
     const response = await authAPI.verifyOTP(email, otp);
-    const data: AuthResponse = response.data;
-    
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
+    const data: any = response.data?.data || response.data;
+
+    const accessToken = data.accessToken || data.access_token;
+    const refreshToken = data.refreshToken || data.refresh_token;
+    if (accessToken) localStorage.setItem('accessToken', accessToken);
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
     setUser(data.user);
   };
 

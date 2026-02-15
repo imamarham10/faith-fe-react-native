@@ -51,6 +51,16 @@ const TIMEZONES = [
   { label: "Pacific/Auckland (New Zealand)", value: "Pacific/Auckland" },
 ];
 
+/** Get the current date string (yyyy-MM-dd) in a specific IANA timezone */
+function getLocalDateString(timezone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 interface CalendarDay {
   gregorianDay: number;
   hijriDay?: number;
@@ -73,29 +83,63 @@ export default function CalendarPage() {
   const [monthData, setMonthData] = useState<any>(null);
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
   const [showConverter, setShowConverter] = useState(false);
-  const [convertDate, setConvertDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [convertDate, setConvertDate] = useState(() => {
+    const now = new Date();
+    return format(now, "yyyy-MM-dd");
+  });
   const [convertedHijri, setConvertedHijri] = useState<any>(null);
   const [convertHijri, setConvertHijri] = useState({ year: 1447, month: 8, day: 27 });
   const [convertedGregorian, setConvertedGregorian] = useState<any>(null);
-  const [selectedTimezone, setSelectedTimezone] = useState("UTC");
+  const [selectedTimezone, setSelectedTimezone] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+    return "UTC";
+  });
   const [showTimezoneDropdown, setShowTimezoneDropdown] = useState(false);
+
 
   // Fetch all calendar data on load
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      // Compute "today" client-side in the selected timezone
+      // (the API's getToday uses the server clock which may be UTC)
+      const localToday = getLocalDateString(selectedTimezone);
+
       try {
-        const [todayRes, eventsRes, upcomingRes, monthRes] = await Promise.allSettled([
+        const [hijriRes, todayRes, eventsRes, upcomingRes, monthRes] = await Promise.allSettled([
+          calendarAPI.convertToHijri(localToday, selectedTimezone),
           calendarAPI.getToday(selectedTimezone),
           calendarAPI.getEvents(),
           calendarAPI.getUpcomingEvents(90, selectedTimezone),
           calendarAPI.getGregorianMonth(currentDate.getFullYear(), currentDate.getMonth() + 1, selectedTimezone),
         ]);
 
-        if (todayRes.status === "fulfilled") {
-          const payload = todayRes.value.data?.data || todayRes.value.data;
-          setHijriToday(payload?.hijri || payload);
+        // Use convertToHijri for accurate Hijri date based on the real local date
+        let hijriData: any = null;
+        if (hijriRes.status === "fulfilled") {
+          const payload = hijriRes.value.data?.data || hijriRes.value.data;
+          const hijri = payload?.hijri || payload;
+          hijriData = {
+            ...hijri,
+            gregorianDate: localToday,
+          };
         }
+
+        // Merge events from getToday (it may still have useful event data)
+        if (todayRes.status === "fulfilled") {
+          const todayPayload = todayRes.value.data?.data || todayRes.value.data;
+          const todayHijri = todayPayload?.hijri || todayPayload;
+          if (hijriData && todayHijri?.events) {
+            hijriData.events = todayHijri.events;
+          }
+          if (!hijriData) {
+            hijriData = { ...todayHijri, gregorianDate: localToday };
+          }
+        }
+
+        setHijriToday(hijriData);
 
         if (eventsRes.status === "fulfilled") {
           const evData = Array.isArray(eventsRes.value.data)
@@ -128,7 +172,8 @@ export default function CalendarPage() {
   useEffect(() => {
     if (monthData && monthData.days) {
       const cells: CalendarDay[] = [];
-      const today = format(new Date(), "yyyy-MM-dd");
+      // Always compute "today" client-side in the selected timezone
+      const today = getLocalDateString(selectedTimezone);
 
       monthData.days.forEach((day: any) => {
         const isToday = day.gregorianDate === today;
@@ -147,7 +192,7 @@ export default function CalendarPage() {
 
       setCalendarDays(cells);
     }
-  }, [monthData]);
+  }, [monthData, selectedTimezone]);
 
   // Convert date to Hijri
   const handleConvertToHijri = async () => {
@@ -236,24 +281,19 @@ export default function CalendarPage() {
                       </p>
                     </div>
 
-                    {/* Gregorian Date */}
+                    {/* Gregorian Date — computed client-side to match the selected timezone */}
                     <div>
                       <p className="text-white/60 text-xs mb-0.5">Gregorian Date</p>
                       <p className="text-sm text-white/80">
-                        {hijriToday.gregorianDate
-                          ? format(new Date(hijriToday.gregorianDate), "EEEE, d MMMM yyyy")
-                          : format(new Date(), "EEEE, d MMMM yyyy")
-                        }
+                        {new Intl.DateTimeFormat("en-US", {
+                          timeZone: selectedTimezone,
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        }).format(new Date())}
                       </p>
                     </div>
-
-                    {/* Day of Week */}
-                    {hijriToday.dayOfWeek && (
-                      <div>
-                        <p className="text-white/60 text-xs mb-0.5">Day</p>
-                        <p className="text-sm text-white/80">{hijriToday.dayOfWeek}</p>
-                      </div>
-                    )}
 
                     {/* Events Today */}
                     {hijriToday.events && hijriToday.events.length > 0 && (
@@ -270,7 +310,15 @@ export default function CalendarPage() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-white/50 text-sm mt-2">{format(new Date(), "EEEE, d MMMM yyyy")}</p>
+                  <p className="text-white/50 text-sm mt-2">
+                    {new Intl.DateTimeFormat("en-US", {
+                      timeZone: selectedTimezone,
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    }).format(new Date())}
+                  </p>
                 )}
               </div>
             </div>
@@ -376,11 +424,14 @@ export default function CalendarPage() {
           <div className="lg:col-span-2">
             {/* Timezone Selector */}
             <div className="mb-6 relative">
+              <div className="text-xs text-text-muted mb-2 flex items-center gap-1">
+                <Globe size={13} />
+                <span>Timezone (Device Location Auto-Detected)</span>
+              </div>
               <button
                 onClick={() => setShowTimezoneDropdown(!showTimezoneDropdown)}
-                className="flex items-center gap-2 text-sm font-medium text-text bg-white/50 border border-border-light px-4 py-2.5 rounded-xl hover:bg-white/70 transition-colors"
+                className="flex items-center gap-2 text-sm font-medium text-text bg-white/50 border border-border-light px-4 py-2.5 rounded-xl hover:bg-white/70 transition-colors w-full justify-between"
               >
-                <Globe size={16} />
                 <span>{TIMEZONES.find(tz => tz.value === selectedTimezone)?.label || selectedTimezone}</span>
                 <ChevronDown size={14} className={`transition-transform ${showTimezoneDropdown ? "rotate-180" : ""}`} />
               </button>
@@ -569,31 +620,42 @@ export default function CalendarPage() {
                   <div className="space-y-3 stagger-children">
                     {(upcomingEvents.length > 0 ? upcomingEvents : events)
                       .slice(0, 8)
-                      .map((event: any, i: number) => (
-                        <div key={event.id || i} className="card p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center shrink-0">
-                              <Star size={16} className="text-primary" />
-                            </div>
-                            <div className="min-w-0">
-                              <h4 className="text-sm font-semibold text-text">{event.name}</h4>
-                              {event.nameArabic && (
-                                <p className="font-amiri text-sm text-text-muted">{event.nameArabic}</p>
-                              )}
-                              {event.description && (
-                                <p className="text-xs text-text-secondary mt-1 line-clamp-2">
-                                  {event.description}
-                                </p>
-                              )}
-                              {(event.hijriDay || event.hijriMonth) && (
-                                <p className="text-[10px] text-text-muted mt-1.5">
-                                  {event.hijriDay} {event.hijriMonth}
-                                </p>
-                              )}
+                      .map((item: any, i: number) => {
+                        const evt = item.event || item;
+                        const daysUntil = item.daysUntil;
+                        return (
+                          <div key={evt.id || i} className="card p-4">
+                            <div className="flex items-start gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center shrink-0">
+                                <Star size={16} className="text-primary" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-sm font-semibold text-text">{evt.name}</h4>
+                                {evt.nameArabic && (
+                                  <p className="font-amiri text-sm text-text-muted">{evt.nameArabic}</p>
+                                )}
+                                {evt.description && (
+                                  <p className="text-xs text-text-secondary mt-1 line-clamp-2">
+                                    {evt.description}
+                                  </p>
+                                )}
+                                <div className="flex items-center justify-between mt-1.5">
+                                  {(evt.hijriDay || evt.hijriMonth) && (
+                                    <p className="text-[10px] text-text-muted">
+                                      {evt.hijriDay} {evt.hijriMonth}
+                                    </p>
+                                  )}
+                                  {daysUntil !== undefined && (
+                                    <p className="text-[10px] text-primary font-medium">
+                                      {daysUntil === 0 ? "Today" : `In ${daysUntil} day${daysUntil === 1 ? "" : "s"}`}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                   </div>
                 ) : (
                   <div className="card p-8 text-center">
