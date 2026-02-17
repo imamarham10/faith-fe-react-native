@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router";
+import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router';
 import {
   Plus,
   RotateCcw,
@@ -12,17 +12,22 @@ import {
   History,
   TrendingUp,
   Check,
-} from "lucide-react";
-import { dhikrAPI } from "~/services/api";
-import { useAuth } from "~/contexts/AuthContext";
-import type { DhikrCounter, DhikrGoal, DhikrStats, DhikrHistoryEntry, DhikrPhrase } from "~/types";
+} from 'lucide-react';
+import { dhikrAPI } from '~/services/api';
+import { useAuth } from '~/contexts/AuthContext';
+import type { DhikrCounter, DhikrGoal, DhikrStats, DhikrHistoryEntry, DhikrPhrase } from '~/types';
 
 const PRESET_DHIKR = [
-  { name: "SubhanAllah", arabic: "سُبْحَانَ اللَّهِ", phrase: "SubhanAllah", target: 33 },
-  { name: "Alhamdulillah", arabic: "الْحَمْدُ لِلَّهِ", phrase: "Alhamdulillah", target: 33 },
-  { name: "Allahu Akbar", arabic: "اللَّهُ أَكْبَرُ", phrase: "Allahu Akbar", target: 34 },
-  { name: "La ilaha illallah", arabic: "لَا إِلَٰهَ إِلَّا اللَّهُ", phrase: "La ilaha illallah", target: 100 },
-  { name: "Astaghfirullah", arabic: "أَسْتَغْفِرُ اللَّهَ", phrase: "Astaghfirullah", target: 100 },
+  { name: 'SubhanAllah', arabic: 'سُبْحَانَ اللَّهِ', phrase: 'SubhanAllah', target: 33 },
+  { name: 'Alhamdulillah', arabic: 'الْحَمْدُ لِلَّهِ', phrase: 'Alhamdulillah', target: 33 },
+  { name: 'Allahu Akbar', arabic: 'اللَّهُ أَكْبَرُ', phrase: 'Allahu Akbar', target: 34 },
+  {
+    name: 'La ilaha illallah',
+    arabic: 'لَا إِلَٰهَ إِلَّا اللَّهُ',
+    phrase: 'La ilaha illallah',
+    target: 100,
+  },
+  { name: 'Astaghfirullah', arabic: 'أَسْتَغْفِرُ اللَّهَ', phrase: 'Astaghfirullah', target: 100 },
 ];
 
 export default function DhikrPage() {
@@ -34,15 +39,15 @@ export default function DhikrPage() {
   const [pulse, setPulse] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showCreateGoal, setShowCreateGoal] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newPhrase, setNewPhrase] = useState("");
+  const [newName, setNewName] = useState('');
+  const [newPhrase, setNewPhrase] = useState('');
   const [newTarget, setNewTarget] = useState(33);
 
   // New state for stats, goals, history
   const [stats, setStats] = useState<DhikrStats | null>(null);
   const [goals, setGoals] = useState<DhikrGoal[]>([]);
   const [history, setHistory] = useState<DhikrHistoryEntry[]>([]);
-  const [activeTab, setActiveTab] = useState<"goals" | "stats" | "history">("goals");
+  const [activeTab, setActiveTab] = useState<'goals' | 'stats' | 'history'>('goals');
   const [phrases, setPhrases] = useState<DhikrPhrase[]>([]);
   const [phrasesLoading, setPhrasesLoading] = useState(false);
   const [isLogging, setIsLogging] = useState(false);
@@ -60,22 +65,24 @@ export default function DhikrPage() {
         dhikrAPI.getHistory(),
       ]);
 
-      if (countersRes.status === "fulfilled") {
-        const data = Array.isArray(countersRes.value.data) ? countersRes.value.data : countersRes.value.data?.data || [];
+      if (countersRes.status === 'fulfilled') {
+        const data = Array.isArray(countersRes.value.data)
+          ? countersRes.value.data
+          : countersRes.value.data?.data || [];
         setCounters(data);
         if (data.length > 0 && !active) {
           setActive(data[0]);
           setLocalCount(data[0].count || 0);
         }
       }
-      if (statsRes.status === "fulfilled") {
+      if (statsRes.status === 'fulfilled') {
         setStats(statsRes.value.data?.data || statsRes.value.data || null);
       }
-      if (goalsRes.status === "fulfilled") {
+      if (goalsRes.status === 'fulfilled') {
         const gd = goalsRes.value.data?.data || goalsRes.value.data;
         setGoals(Array.isArray(gd) ? gd : []);
       }
-      if (historyRes.status === "fulfilled") {
+      if (historyRes.status === 'fulfilled') {
         const hd = historyRes.value.data?.data || historyRes.value.data;
         setHistory(Array.isArray(hd) ? hd : []);
       }
@@ -92,8 +99,9 @@ export default function DhikrPage() {
   useEffect(() => {
     if (showCreate && user && phrases.length === 0) {
       setPhrasesLoading(true);
-      dhikrAPI.getPhrases()
-        .then((res) => {
+      dhikrAPI
+        .getPhrases()
+        .then(res => {
           const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
           setPhrases(data);
         })
@@ -136,15 +144,13 @@ export default function DhikrPage() {
     setIsLogging(true);
     try {
       await dhikrAPI.updateCounter(active.id, localCount);
-      setCounters((prev) =>
-        prev.map((c) => (c.id === active.id ? { ...c, count: localCount } : c))
-      );
+      setCounters(prev => prev.map(c => (c.id === active.id ? { ...c, count: localCount } : c)));
       // Clear localStorage after successful log
       localStorage.removeItem(`dhikr_${active.id}`);
       // Reset UI
       setLocalCount(0);
     } catch (error) {
-      console.error("Failed to log dhikr:", error);
+      console.error('Failed to log dhikr:', error);
     } finally {
       setIsLogging(false);
     }
@@ -154,7 +160,7 @@ export default function DhikrPage() {
     if (!user) return;
     try {
       await dhikrAPI.deleteCounter(id);
-      setCounters((prev) => prev.filter((c) => c.id !== id));
+      setCounters(prev => prev.filter(c => c.id !== id));
       if (active?.id === id) {
         setActive(null);
         setLocalCount(0);
@@ -167,22 +173,26 @@ export default function DhikrPage() {
     try {
       const res = await dhikrAPI.createCounter(name, phrase, target);
       const newCounter = res.data?.data || res.data;
-      setCounters((prev) => [...prev, newCounter]);
+      setCounters(prev => [...prev, newCounter]);
       setActive(newCounter);
       setLocalCount(0);
       setShowCreate(false);
-      setNewName("");
-      setNewPhrase("");
+      setNewName('');
+      setNewPhrase('');
       setNewTarget(33);
     } catch {}
   };
 
-  const handleCreateGoal = async (phrase: string, targetCount: number, period: "daily" | "weekly" | "monthly") => {
+  const handleCreateGoal = async (
+    phrase: string,
+    targetCount: number,
+    period: 'daily' | 'weekly' | 'monthly',
+  ) => {
     if (!user || !phrase.trim()) return;
     try {
       const res = await dhikrAPI.createGoal(phrase, targetCount, period);
       const newGoal = res.data?.data || res.data;
-      setGoals((prev) => [...prev, newGoal]);
+      setGoals(prev => [...prev, newGoal]);
       setShowCreateGoal(false);
     } catch {}
   };
@@ -213,8 +223,8 @@ export default function DhikrPage() {
                 Dhikr Counter
               </h1>
               <p className="text-white/60 text-sm sm:text-base leading-relaxed max-w-md mb-6">
-                Remember Allah with every breath. Track your daily remembrance,
-                set goals, and build a consistent practice.
+                Remember Allah with every breath. Track your daily remembrance, set goals, and build
+                a consistent practice.
               </p>
 
               {/* Quick stat badges */}
@@ -229,13 +239,13 @@ export default function DhikrPage() {
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 text-white/70 text-xs font-medium">
                   <Target size={12} className="text-emerald-300" />
-                  {counters.length} counter{counters.length !== 1 ? "s" : ""}
+                  {counters.length} counter{counters.length !== 1 ? 's' : ''}
                 </span>
               </div>
             </div>
 
             {/* Right — Active Counter in Glass Card */}
-            <div className="animate-fade-in-up" style={{ animationDelay: "0.15s" }}>
+            <div className="animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
               {active ? (
                 <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 sm:p-8 border border-white/15">
                   <p className="text-white/50 text-[10px] uppercase tracking-wider font-semibold mb-1">
@@ -251,10 +261,20 @@ export default function DhikrPage() {
                   {/* Circular counter */}
                   <div className="relative inline-flex items-center justify-center mb-4 w-full">
                     <svg width="200" height="200" className="transform -rotate-90 mx-auto">
-                      <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="5" />
                       <circle
-                        cx="100" cy="100" r="90" fill="none"
-                        stroke={isComplete ? "#C8A55A" : "rgba(255,255,255,0.8)"}
+                        cx="100"
+                        cy="100"
+                        r="90"
+                        fill="none"
+                        stroke="rgba(255,255,255,0.1)"
+                        strokeWidth="5"
+                      />
+                      <circle
+                        cx="100"
+                        cy="100"
+                        r="90"
+                        fill="none"
+                        stroke={isComplete ? '#C8A55A' : 'rgba(255,255,255,0.8)'}
                         strokeWidth="5"
                         strokeDasharray={circumference}
                         strokeDashoffset={dashOffset}
@@ -264,23 +284,24 @@ export default function DhikrPage() {
                     </svg>
                     <button
                       onClick={handleIncrement}
-                      className={`absolute inset-0 flex flex-col items-center justify-center select-none transition-transform ${pulse ? "scale-95" : ""}`}
-                      disabled={isComplete}
-                    >
-                      <span className={`text-5xl sm:text-6xl font-bold text-white tabular-nums ${pulse ? "animate-count-pulse" : ""}`}>
+                      className={`absolute inset-0 flex flex-col items-center justify-center select-none transition-transform ${pulse ? 'scale-95' : ''}`}
+                      disabled={isComplete}>
+                      <span
+                        className={`text-5xl sm:text-6xl font-bold text-white tabular-nums ${pulse ? 'animate-count-pulse' : ''}`}>
                         {localCount}
                       </span>
                       <span className="text-[11px] text-white/40 mt-0.5">of {target}</span>
                     </button>
                   </div>
 
-                  <p className="text-white/40 text-xs text-center mb-4">Tap the counter to increment</p>
+                  <p className="text-white/40 text-xs text-center mb-4">
+                    Tap the counter to increment
+                  </p>
 
                   <div className="flex items-center justify-center gap-3">
                     <button
                       onClick={handleReset}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 text-white/60 hover:bg-white/15 text-xs font-medium transition-colors"
-                    >
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 text-white/60 hover:bg-white/15 text-xs font-medium transition-colors">
                       <RotateCcw size={13} />
                       Reset
                     </button>
@@ -288,15 +309,14 @@ export default function DhikrPage() {
 
                   {isComplete && (
                     <div className="mt-4 space-y-3">
-                      <div className="p-3 rounded-xl bg-gold/20 border border-gold/30 text-gold text-xs font-semibold text-center">
+                      <div className="p-3 rounded-xl bg-linear-to-tl mask-from-gold mask-to-gold-dark text-lg font-semibold text-white text-center">
                         ✨ Target reached! MashaAllah! ✨
                       </div>
                       {user && (
                         <button
                           onClick={handleLogDhikr}
                           disabled={isLogging}
-                          className="w-full px-4 py-3 rounded-xl bg-linear-to-r from-primary to-primary/80 text-white font-semibold text-sm hover:shadow-lg hover:from-primary/90 hover:to-primary/70 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
+                          className="w-full px-4 py-3 rounded-xl bg-linear-to-r from-primary to-primary/80 text-white font-semibold text-sm hover:shadow-lg hover:from-primary/90 hover:to-primary/70 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                           {isLogging ? (
                             <>
                               <Loader2 size={16} className="animate-spin" />
@@ -319,8 +339,7 @@ export default function DhikrPage() {
                   <p className="text-white/60 text-sm mb-4">No counter selected</p>
                   <button
                     onClick={() => setShowCreate(true)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/15 text-white text-sm font-semibold hover:bg-white/20 transition-colors"
-                  >
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/15 text-white text-sm font-semibold hover:bg-white/20 transition-colors">
                     <Plus size={15} />
                     Create Counter
                   </button>
@@ -330,8 +349,7 @@ export default function DhikrPage() {
           </div>
         </div>
       </section>
-
-      {/* Stats Bar */}
+      {/* Stats Bar
       <section className="container-faith -mt-6 relative z-10 mb-8">
         <div className="card-elevated p-4 sm:p-5">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -361,8 +379,7 @@ export default function DhikrPage() {
             />
           </div>
         </div>
-      </section>
-
+      </section> */}
       <div className="container-faith pb-12 max-w-5xl mx-auto">
         {loading ? (
           <div className="flex flex-col items-center py-20">
@@ -376,10 +393,12 @@ export default function DhikrPage() {
               <div>
                 <h2 className="section-title">Your Counters</h2>
                 <p className="section-subtitle">
-                  {counters.length} counter{counters.length !== 1 ? "s" : ""}
+                  {counters.length} counter{counters.length !== 1 ? 's' : ''}
                 </p>
               </div>
-              <button onClick={() => setShowCreate(true)} className="btn-secondary text-sm py-2 px-4">
+              <button
+                onClick={() => setShowCreate(true)}
+                className="btn-secondary text-sm py-2 px-4">
                 <Plus size={14} />
                 New
               </button>
@@ -387,7 +406,7 @@ export default function DhikrPage() {
 
             {counters.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 stagger-children mb-12">
-                {counters.map((counter) => {
+                {counters.map(counter => {
                   const ct = counter.targetCount || 33;
                   const cp = Math.min((counter.count / ct) * 100, 100);
                   const isActiveCard = active?.id === counter.id;
@@ -397,19 +416,22 @@ export default function DhikrPage() {
                       key={counter.id}
                       onClick={() => selectCounter(counter)}
                       className={`card p-5 text-left transition-all ${
-                        isActiveCard
-                          ? "ring-2 ring-primary ring-offset-2"
-                          : "hover:border-border"
-                      }`}
-                    >
+                        isActiveCard ? 'ring-2 ring-primary ring-offset-2' : 'hover:border-border'
+                      }`}>
                       <div className="flex items-start justify-between mb-2">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-0.5">
-                            <h3 className="text-sm font-semibold text-text truncate">{counter.name}</h3>
-                            {isDone && <span className="badge badge-gold text-[10px]">Complete</span>}
+                            <h3 className="text-sm font-semibold text-text truncate">
+                              {counter.name}
+                            </h3>
+                            {isDone && (
+                              <span className="badge badge-gold text-[10px]">Complete</span>
+                            )}
                           </div>
                           {counter.phraseArabic && (
-                            <p className="font-amiri text-base text-text-secondary truncate" dir="rtl">
+                            <p
+                              className="font-amiri text-base text-text-secondary truncate"
+                              dir="rtl">
                               {counter.phraseArabic}
                             </p>
                           )}
@@ -418,21 +440,25 @@ export default function DhikrPage() {
                           )}
                         </div>
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(counter.id); }}
-                          className="p-1.5 rounded-lg hover:bg-error/10 text-text-muted hover:text-error transition-colors shrink-0"
-                        >
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleDelete(counter.id);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-error/10 text-text-muted hover:text-error transition-colors shrink-0">
                           <Trash2 size={13} />
                         </button>
                       </div>
 
                       <div className="w-full bg-border-light h-1.5 rounded-full overflow-hidden mb-2 mt-3">
                         <div
-                          className={`h-full rounded-full transition-all duration-500 ${isDone ? "bg-gold" : "bg-primary"}`}
+                          className={`h-full rounded-full transition-all duration-500 ${isDone ? 'bg-gold' : 'bg-primary'}`}
                           style={{ width: `${cp}%` }}
                         />
                       </div>
                       <div className="flex justify-between text-xs text-text-muted">
-                        <span>{counter.count} / {ct}</span>
+                        <span>
+                          {counter.count} / {ct}
+                        </span>
                         <span>{Math.round(cp)}%</span>
                       </div>
                     </button>
@@ -443,7 +469,9 @@ export default function DhikrPage() {
               <div className="card-elevated p-10 text-center mb-12">
                 <Moon size={36} className="text-text-muted mx-auto mb-3" />
                 <h3 className="text-base font-semibold text-text mb-1">Start your dhikr journey</h3>
-                <p className="text-sm text-text-muted mb-4">Create your first counter to begin tracking</p>
+                <p className="text-sm text-text-muted mb-4">
+                  Create your first counter to begin tracking
+                </p>
                 <button onClick={() => setShowCreate(true)} className="btn-primary">
                   <Plus size={16} />
                   Create Counter
@@ -453,9 +481,11 @@ export default function DhikrPage() {
 
             {/* Tabbed Section */}
             <div className="flex items-center gap-1 bg-bg rounded-xl p-1 mb-6">
-              {(["goals", "stats", "history"] as const).map((tab) => {
-                const icons = { goals: Target, stats: BarChart3, history: History };
-                const labels = { goals: "Goals", stats: "Statistics", history: "History" };
+              {(['goals'] as const).map(tab => {
+                // const icons = { goals: Target, stats: BarChart3, history: History };
+                // const labels = { goals: 'Goals', stats: 'Statistics', history: 'History' };
+                const icons = { goals: Target };
+                const labels = { goals: 'Goals' };
                 const Icon = icons[tab];
                 return (
                   <button
@@ -463,10 +493,9 @@ export default function DhikrPage() {
                     onClick={() => setActiveTab(tab)}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 justify-center ${
                       activeTab === tab
-                        ? "bg-surface text-primary shadow-sm"
-                        : "text-text-muted hover:text-text"
-                    }`}
-                  >
+                        ? 'bg-surface text-primary shadow-sm'
+                        : 'text-text-muted hover:text-text'
+                    }`}>
                     <Icon size={15} />
                     {labels[tab]}
                   </button>
@@ -475,18 +504,14 @@ export default function DhikrPage() {
             </div>
 
             {/* Tab Content */}
-            {activeTab === "goals" && (
-              <GoalsTab
-                goals={goals}
-                onCreateGoal={() => setShowCreateGoal(true)}
-              />
+            {activeTab === 'goals' && (
+              <GoalsTab goals={goals} onCreateGoal={() => setShowCreateGoal(true)} />
             )}
-            {activeTab === "stats" && <StatsTab stats={stats} />}
-            {activeTab === "history" && <HistoryTab history={history} />}
+            {activeTab === 'stats' && <StatsTab stats={stats} />}
+            {activeTab === 'history' && <HistoryTab history={history} />}
           </>
         )}
       </div>
-
       {/* Create Counter Modal */}
       {showCreate && (
         <Modal onClose={() => setShowCreate(false)}>
@@ -501,16 +526,25 @@ export default function DhikrPage() {
                 <Loader2 className="animate-spin text-primary" size={20} />
               </div>
             ) : phrases.length > 0 ? (
-              phrases.map((p) => {
-                const targetMap: Record<string, number> = { tasbih: 33, istighfar: 100, tawhid: 100, salawat: 33, istiadhah: 33, dua: 7, general: 33 };
+              phrases.map(p => {
+                const targetMap: Record<string, number> = {
+                  tasbih: 33,
+                  istighfar: 100,
+                  tawhid: 100,
+                  salawat: 33,
+                  istiadhah: 33,
+                  dua: 7,
+                  general: 33,
+                };
                 const target = targetMap[p.category] || 33;
                 return (
                   <button
                     key={p.transliteration}
                     onClick={() => handleCreate(p.transliteration, p.arabic, target)}
-                    className="card p-3 text-left hover:border-primary/30 transition-colors"
-                  >
-                    <p className="font-amiri text-lg text-text mb-0.5" dir="rtl">{p.arabic}</p>
+                    className="card p-3 text-left hover:border-primary/30 transition-colors">
+                    <p className="font-amiri text-lg text-text mb-0.5" dir="rtl">
+                      {p.arabic}
+                    </p>
                     <p className="text-sm font-semibold text-text">{p.transliteration}</p>
                     <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1">
                       <Target size={10} /> {target}x
@@ -519,13 +553,14 @@ export default function DhikrPage() {
                 );
               })
             ) : (
-              PRESET_DHIKR.map((p) => (
+              PRESET_DHIKR.map(p => (
                 <button
                   key={p.name}
                   onClick={() => handleCreate(p.name, p.phrase, p.target)}
-                  className="card p-3 text-left hover:border-primary/30 transition-colors"
-                >
-                  <p className="font-amiri text-lg text-text mb-0.5" dir="rtl">{p.arabic}</p>
+                  className="card p-3 text-left hover:border-primary/30 transition-colors">
+                  <p className="font-amiri text-lg text-text mb-0.5" dir="rtl">
+                    {p.arabic}
+                  </p>
                   <p className="text-sm font-semibold text-text">{p.name}</p>
                   <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1">
                     <Target size={10} /> {p.target}x
@@ -543,14 +578,14 @@ export default function DhikrPage() {
               type="text"
               placeholder="Counter name (e.g. Morning Dhikr)"
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={e => setNewName(e.target.value)}
               className="input-field"
             />
             <input
               type="text"
               placeholder="Phrase (e.g. SubhanAllah)"
               value={newPhrase}
-              onChange={(e) => setNewPhrase(e.target.value)}
+              onChange={e => setNewPhrase(e.target.value)}
               className="input-field"
             />
             <div className="flex items-center gap-3">
@@ -558,15 +593,14 @@ export default function DhikrPage() {
                 type="number"
                 placeholder="Target"
                 value={newTarget}
-                onChange={(e) => setNewTarget(Number(e.target.value))}
+                onChange={e => setNewTarget(Number(e.target.value))}
                 className="input-field"
                 min={1}
               />
               <button
                 onClick={() => handleCreate(newName, newPhrase || newName, newTarget)}
                 disabled={!newName.trim()}
-                className="btn-primary shrink-0 disabled:opacity-50"
-              >
+                className="btn-primary shrink-0 disabled:opacity-50">
                 Create
               </button>
             </div>
@@ -574,13 +608,11 @@ export default function DhikrPage() {
 
           <button
             onClick={() => setShowCreate(false)}
-            className="mt-4 w-full text-center text-sm text-text-muted hover:text-text py-2"
-          >
+            className="mt-4 w-full text-center text-sm text-text-muted hover:text-text py-2">
             Cancel
           </button>
         </Modal>
       )}
-
       {/* Create Goal Modal */}
       {showCreateGoal && (
         <CreateGoalModal
@@ -639,26 +671,28 @@ function GoalsTab({ goals, onCreateGoal }: { goals: DhikrGoal[]; onCreateGoal: (
   }
 
   const periodBadge: Record<string, string> = {
-    daily: "badge badge-primary",
-    weekly: "badge badge-gold",
-    monthly: "badge-success badge",
+    daily: 'badge badge-primary',
+    weekly: 'badge badge-gold',
+    monthly: 'badge-success badge',
   };
 
   return (
     <div>
       <div className="space-y-3 mb-6">
-        {goals.map((goal) => (
+        {goals.map(goal => (
           <div key={goal.id} className="card-elevated p-5">
             <div className="flex items-start justify-between mb-3">
               <div>
                 {goal.phraseArabic && (
-                  <p className="font-amiri text-lg text-text mb-0.5" dir="rtl">{goal.phraseArabic}</p>
+                  <p className="font-amiri text-lg text-text mb-0.5" dir="rtl">
+                    {goal.phraseArabic}
+                  </p>
                 )}
                 <p className="text-sm font-semibold text-text">
-                  {goal.phraseEnglish || "Dhikr Goal"}
+                  {goal.phraseEnglish || 'Dhikr Goal'}
                 </p>
               </div>
-              <span className={periodBadge[goal.period] || "badge badge-primary"}>
+              <span className={periodBadge[goal.period] || 'badge badge-primary'}>
                 {goal.period}
               </span>
             </div>
@@ -685,9 +719,7 @@ function StatsTab({ stats }: { stats: DhikrStats | null }) {
       <div className="card-elevated p-10 text-center">
         <BarChart3 size={36} className="text-text-muted mx-auto mb-3" />
         <h3 className="text-base font-semibold text-text mb-1">No stats yet</h3>
-        <p className="text-sm text-text-muted">
-          Start counting dhikr to see your statistics
-        </p>
+        <p className="text-sm text-text-muted">Start counting dhikr to see your statistics</p>
       </div>
     );
   }
@@ -730,30 +762,26 @@ function HistoryTab({ history }: { history: DhikrHistoryEntry[] }) {
       <div className="card-elevated p-10 text-center">
         <History size={36} className="text-text-muted mx-auto mb-3" />
         <h3 className="text-base font-semibold text-text mb-1">No history yet</h3>
-        <p className="text-sm text-text-muted">
-          Your dhikr activity will appear here
-        </p>
+        <p className="text-sm text-text-muted">Your dhikr activity will appear here</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      {history.map((entry) => (
+      {history.map(entry => (
         <div key={entry.id} className="card p-4 flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
             <Moon size={16} className="text-primary" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-text">{entry.phrase || "Dhikr"}</p>
+              <p className="text-sm font-semibold text-text">{entry.phrase || 'Dhikr'}</p>
               {entry.phraseArabic && (
                 <span className="font-amiri text-sm text-text-muted">{entry.phraseArabic}</span>
               )}
             </div>
-            <p className="text-xs text-text-muted">
-              {entry.count} recitations
-            </p>
+            <p className="text-xs text-text-muted">{entry.count} recitations</p>
           </div>
           <p className="text-xs text-text-muted shrink-0">
             {new Date(entry.date || entry.createdAt).toLocaleDateString()}
@@ -770,8 +798,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
       <div
         className="relative bg-surface rounded-2xl shadow-xl w-full max-w-md p-6 animate-slide-down max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
+        onClick={e => e.stopPropagation()}>
         {children}
       </div>
     </div>
@@ -785,11 +812,11 @@ function CreateGoalModal({
 }: {
   counters: DhikrCounter[];
   onClose: () => void;
-  onCreate: (phrase: string, targetCount: number, period: "daily" | "weekly" | "monthly") => void;
+  onCreate: (phrase: string, targetCount: number, period: 'daily' | 'weekly' | 'monthly') => void;
 }) {
-  const [phrase, setPhrase] = useState(counters[0]?.name || "");
+  const [phrase, setPhrase] = useState(counters[0]?.name || '');
   const [targetCount, setTargetCount] = useState(100);
-  const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
   return (
     <Modal onClose={onClose}>
@@ -803,12 +830,11 @@ function CreateGoalModal({
           {counters.length > 0 ? (
             <select
               value={phrase}
-              onChange={(e) => setPhrase(e.target.value)}
-              className="input-field"
-            >
-              {counters.map((c) => (
+              onChange={e => setPhrase(e.target.value)}
+              className="input-field">
+              {counters.map(c => (
                 <option key={c.id} value={c.phraseEnglish || c.name}>
-                  {c.name} {c.phraseArabic ? `— ${c.phraseArabic}` : ""}
+                  {c.name} {c.phraseArabic ? `— ${c.phraseArabic}` : ''}
                 </option>
               ))}
             </select>
@@ -817,7 +843,7 @@ function CreateGoalModal({
               type="text"
               placeholder="e.g. SubhanAllah"
               value={phrase}
-              onChange={(e) => setPhrase(e.target.value)}
+              onChange={e => setPhrase(e.target.value)}
               className="input-field"
             />
           )}
@@ -830,7 +856,7 @@ function CreateGoalModal({
           <input
             type="number"
             value={targetCount}
-            onChange={(e) => setTargetCount(Number(e.target.value))}
+            onChange={e => setTargetCount(Number(e.target.value))}
             className="input-field"
             min={1}
           />
@@ -841,16 +867,15 @@ function CreateGoalModal({
             Period
           </label>
           <div className="flex gap-2">
-            {(["daily", "weekly", "monthly"] as const).map((p) => (
+            {(['daily', 'weekly', 'monthly'] as const).map(p => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   period === p
-                    ? "bg-primary text-white"
-                    : "bg-bg text-text-secondary hover:bg-border-light"
-                }`}
-              >
+                    ? 'bg-primary text-white'
+                    : 'bg-bg text-text-secondary hover:bg-border-light'
+                }`}>
                 {p.charAt(0).toUpperCase() + p.slice(1)}
               </button>
             ))}
@@ -860,8 +885,7 @@ function CreateGoalModal({
         <button
           onClick={() => onCreate(phrase, targetCount, period)}
           disabled={!phrase.trim()}
-          className="btn-primary w-full disabled:opacity-50"
-        >
+          className="btn-primary w-full disabled:opacity-50">
           <Check size={16} />
           Create Goal
         </button>
@@ -869,8 +893,7 @@ function CreateGoalModal({
 
       <button
         onClick={onClose}
-        className="mt-3 w-full text-center text-sm text-text-muted hover:text-text py-2"
-      >
+        className="mt-3 w-full text-center text-sm text-text-muted hover:text-text py-2">
         Cancel
       </button>
     </Modal>
@@ -896,8 +919,8 @@ function GuestDhikr() {
 
   const handleTap = () => {
     if (isComplete) return;
-    setCount((c) => c + 1);
-    setSessionTotal((s) => s + 1);
+    setCount(c => c + 1);
+    setSessionTotal(s => s + 1);
     setPulse(true);
     setTimeout(() => setPulse(false), 200);
   };
@@ -912,12 +935,8 @@ function GuestDhikr() {
       <section className="bg-hero-gradient text-white pattern-islamic">
         <div className="container-faith py-10 md:py-14 text-center">
           <Moon size={28} className="text-gold-light mx-auto mb-4" />
-          <h1 className="text-3xl sm:text-4xl font-bold font-playfair mb-2">
-            Dhikr Counter
-          </h1>
-          <p className="text-white/60 text-sm">
-            Remember Allah with every breath
-          </p>
+          <h1 className="text-3xl sm:text-4xl font-bold font-playfair mb-2">Dhikr Counter</h1>
+          <p className="text-white/60 text-sm">Remember Allah with every breath</p>
         </div>
       </section>
 
@@ -930,10 +949,9 @@ function GuestDhikr() {
               onClick={() => switchPreset(i)}
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                 selectedPreset === i
-                  ? "bg-primary text-white"
-                  : "bg-surface border border-border-light text-text-secondary hover:border-primary/30"
-              }`}
-            >
+                  ? 'bg-primary text-white'
+                  : 'bg-surface border border-border-light text-text-secondary hover:border-primary/30'
+              }`}>
               {p.name}
             </button>
           ))}
@@ -947,21 +965,34 @@ function GuestDhikr() {
 
           <div className="relative inline-flex items-center justify-center mb-6">
             <svg width="200" height="200" className="transform -rotate-90">
-              <circle cx="100" cy="100" r="90" fill="none" stroke="currentColor" strokeWidth="5" className="text-border-light" />
               <circle
-                cx="100" cy="100" r="90" fill="none"
-                stroke="currentColor" strokeWidth="5"
-                strokeDasharray={circumference} strokeDashoffset={dashOffset}
+                cx="100"
+                cy="100"
+                r="90"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="5"
+                className="text-border-light"
+              />
+              <circle
+                cx="100"
+                cy="100"
+                r="90"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="5"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
                 strokeLinecap="round"
-                className={`${isComplete ? "text-gold" : "text-primary"} progress-ring-circle`}
+                className={`${isComplete ? 'text-gold' : 'text-primary'} progress-ring-circle`}
               />
             </svg>
             <button
               onClick={handleTap}
-              className={`absolute inset-0 flex flex-col items-center justify-center select-none transition-transform ${pulse ? "scale-95" : ""}`}
-              disabled={isComplete}
-            >
-              <span className={`text-5xl sm:text-6xl font-bold text-text tabular-nums ${pulse ? "animate-count-pulse" : ""}`}>
+              className={`absolute inset-0 flex flex-col items-center justify-center select-none transition-transform ${pulse ? 'scale-95' : ''}`}
+              disabled={isComplete}>
+              <span
+                className={`text-5xl sm:text-6xl font-bold text-text tabular-nums ${pulse ? 'animate-count-pulse' : ''}`}>
                 {count}
               </span>
               <span className="text-xs text-text-muted mt-1">of {target}</span>
@@ -973,8 +1004,7 @@ function GuestDhikr() {
           <div className="flex items-center justify-center gap-3">
             <button
               onClick={() => setCount(0)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-black/3 text-text-secondary hover:bg-black/6 text-sm font-medium transition-colors"
-            >
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-black/3 text-text-secondary hover:bg-black/6 text-sm font-medium transition-colors">
               <RotateCcw size={14} />
               Reset
             </button>
