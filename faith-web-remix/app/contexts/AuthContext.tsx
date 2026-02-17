@@ -11,6 +11,7 @@ interface AuthContextType {
   loginWithOTP: (email: string, otp: string) => Promise<void>;
   requestOTP: (email: string) => Promise<void>;
   logout: () => Promise<void>;
+  clearAuth: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,10 +28,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
           const response = await authAPI.getProfile();
           setUser(response.data?.data || response.data?.user || response.data);
-        } catch (error) {
-          // Token is invalid, clear it
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
+        } catch (error: any) {
+          // Only clear tokens if the error is 401 (token actually invalid)
+          // For network errors or other issues, keep tokens and allow retry
+          if (error.response?.status === 401) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+          }
+          // For other errors (network, server errors), don't clear tokens
+          // The user will remain in the authenticated state and can retry
         }
       }
       setIsLoading(false);
@@ -85,11 +91,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('Logout error:', error);
       }
     }
-    
+
+    clearAuth();
+  };
+
+  const clearAuth = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     setUser(null);
   };
+
+  // Listen for token clearing events from axios interceptor
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // If tokens are cleared in localStorage, sync the auth context
+      if ((e.key === 'accessToken' || e.key === 'refreshToken') && e.newValue === null) {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -102,6 +125,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         loginWithOTP,
         requestOTP,
         logout,
+        clearAuth,
       }}
     >
       {children}

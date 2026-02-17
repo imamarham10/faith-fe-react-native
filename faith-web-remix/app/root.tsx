@@ -15,6 +15,11 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import logoLight from "./welcome/logo-light.svg";
+
+const appName = "Faith";
+const appDescription = "A comprehensive Islamic companion app for prayers, Quran, dhikr, and spiritual growth.";
+const appUrl = "https://faith-app.com";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -23,6 +28,27 @@ export const links: Route.LinksFunction = () => [
     href: "https://fonts.gstatic.com",
     crossOrigin: "anonymous",
   },
+  { rel: "icon", href: logoLight, type: "image/svg+xml" },
+];
+
+export const meta: Route.MetaFunction = () => [
+  { charset: "utf-8" },
+  { name: "viewport", content: "width=device-width, initial-scale=1" },
+  { name: "theme-color", content: "#1B6B4E" },
+  { name: "description", content: appDescription },
+  { name: "application-name", content: appName },
+  { name: "apple-mobile-web-app-capable", content: "yes" },
+  { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+  { name: "apple-mobile-web-app-title", content: appName },
+  { property: "og:type", content: "website" },
+  { property: "og:title", content: appName },
+  { property: "og:description", content: appDescription },
+  { property: "og:url", content: appUrl },
+  { property: "og:image", content: logoLight },
+  { name: "twitter:card", content: "summary_large_image" },
+  { name: "twitter:title", content: appName },
+  { name: "twitter:description", content: appDescription },
+  { name: "twitter:image", content: logoLight },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -32,6 +58,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#1B6B4E" />
+        <title>{appName}</title>
+        <link rel="icon" href={logoLight} type="image/svg+xml" />
+        <link rel="apple-touch-icon" href={logoLight} />
         <Meta />
         <Links />
       </head>

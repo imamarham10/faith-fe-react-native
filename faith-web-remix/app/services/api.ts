@@ -10,6 +10,25 @@ const api: AxiosInstance = axios.create({
   timeout: 10000,
 });
 
+// Global refresh lock to prevent concurrent refresh attempts
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token!);
+    }
+  });
+
+  failedQueue = [];
+};
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -32,7 +51,20 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized - try to refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // Queue the request while refresh is in progress
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+          }
+          return api(originalRequest);
+        }).catch((err) => Promise.reject(err));
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
@@ -47,6 +79,9 @@ api.interceptors.response.use(
             localStorage.setItem('refreshToken', newRefreshToken);
           }
 
+          processQueue(null, accessToken);
+          isRefreshing = false;
+
           // Retry original request with new token
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -58,6 +93,8 @@ api.interceptors.response.use(
         // Pages handle 401s gracefully; only auth-required features degrade.
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        processQueue(refreshError, null);
+        isRefreshing = false;
         return Promise.reject(refreshError);
       }
     }
