@@ -193,8 +193,8 @@ export const dhikrAPI = {
   getCounters: () =>
     api.get('/api/v1/islam/dhikr/counters'),
 
-  createCounter: (name: string, targetCount?: number) =>
-    api.post('/api/v1/islam/dhikr/counters', { name, targetCount }),
+  createCounter: (name: string, phrase?: string, targetCount?: number) =>
+    api.post('/api/v1/islam/dhikr/counters', { name, phrase, targetCount }),
 
   updateCounter: (id: string, count: number) =>
     api.patch(`/api/v1/islam/dhikr/counters/${id}`, { count }),
@@ -202,8 +202,8 @@ export const dhikrAPI = {
   deleteCounter: (id: string) =>
     api.delete(`/api/v1/islam/dhikr/counters/${id}`),
 
-  createGoal: (counterId: string, targetCount: number, period: 'daily' | 'weekly' | 'monthly') =>
-    api.post('/api/v1/islam/dhikr/goals', { counterId, targetCount, period }),
+  createGoal: (phrase: string, targetCount: number, period: 'daily' | 'weekly' | 'monthly') =>
+    api.post('/api/v1/islam/dhikr/goals', { phrase, targetCount, period }),
 
   getGoals: () =>
     api.get('/api/v1/islam/dhikr/goals'),

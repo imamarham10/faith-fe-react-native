@@ -99,9 +99,11 @@ export interface DhikrCounter {
   id: string;
   userId: string;
   name: string;
-  nameArabic?: string;
+  phraseArabic?: string;
+  phraseEnglish?: string;
   count: number;
   targetCount?: number;
+  isActive?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -109,13 +111,31 @@ export interface DhikrCounter {
 export interface DhikrGoal {
   id: string;
   userId: string;
-  counterId: string;
+  phraseArabic?: string;
+  phraseEnglish?: string;
   targetCount: number;
   period: 'daily' | 'weekly' | 'monthly';
   startDate: string;
   endDate: string;
-  currentCount: number;
-  completed: boolean;
+  createdAt?: string;
+}
+
+export interface DhikrStats {
+  totalCount: number;
+  dailyAverage: number;
+  currentStreak: number;
+  longestStreak: number;
+  completedGoals?: number;
+  mostRecitedPhrase?: string;
+}
+
+export interface DhikrHistoryEntry {
+  id: string;
+  date: string;
+  phrase?: string;
+  phraseArabic?: string;
+  count: number;
+  createdAt: string;
 }
 
 export interface PrayerLog {
