@@ -8,6 +8,8 @@ const featureLinks = [
   { label: "Dhikr Counter", to: "/dhikr" },
   { label: "Islamic Calendar", to: "/calendar" },
   { label: "Qibla Finder", to: "/qibla" },
+  { label: "99 Names of Allah", to: "/names" },
+  { label: "Spiritual Feelings", to: "/feelings" },
 ];
 
 const guestAccountLinks = [
