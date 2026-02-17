@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router";
 import {
   Plus,
@@ -37,7 +37,6 @@ export default function DhikrPage() {
   const [newName, setNewName] = useState("");
   const [newPhrase, setNewPhrase] = useState("");
   const [newTarget, setNewTarget] = useState(33);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // New state for stats, goals, history
   const [stats, setStats] = useState<DhikrStats | null>(null);
@@ -46,6 +45,7 @@ export default function DhikrPage() {
   const [activeTab, setActiveTab] = useState<"goals" | "stats" | "history">("goals");
   const [phrases, setPhrases] = useState<DhikrPhrase[]>([]);
   const [phrasesLoading, setPhrasesLoading] = useState(false);
+  const [isLogging, setIsLogging] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!user) {
@@ -102,6 +102,15 @@ export default function DhikrPage() {
     }
   }, [showCreate, user, phrases.length]);
 
+  // Load localStorage count when active counter changes
+  useEffect(() => {
+    if (active) {
+      const stored = localStorage.getItem(`dhikr_${active.id}`);
+      const count = stored ? parseInt(stored, 10) : active.count || 0;
+      setLocalCount(count);
+    }
+  }, [active?.id]);
+
   const handleIncrement = () => {
     if (!active) return;
     const target = active.targetCount || 33;
@@ -112,27 +121,32 @@ export default function DhikrPage() {
     setPulse(true);
     setTimeout(() => setPulse(false), 200);
 
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      if (user) {
-        dhikrAPI.updateCounter(active.id, next).catch(() => {});
-        setCounters((prev) =>
-          prev.map((c) => (c.id === active.id ? { ...c, count: next } : c))
-        );
-      }
-    }, 500);
+    // Save to localStorage for persistence
+    localStorage.setItem(`dhikr_${active.id}`, next.toString());
   };
 
-  const handleReset = async () => {
+  const handleReset = () => {
     if (!active) return;
     setLocalCount(0);
-    if (user) {
-      try {
-        await dhikrAPI.updateCounter(active.id, 0);
-        setCounters((prev) =>
-          prev.map((c) => (c.id === active.id ? { ...c, count: 0 } : c))
-        );
-      } catch {}
+    localStorage.removeItem(`dhikr_${active.id}`);
+  };
+
+  const handleLogDhikr = async () => {
+    if (!active || localCount === 0) return;
+    setIsLogging(true);
+    try {
+      await dhikrAPI.updateCounter(active.id, localCount);
+      setCounters((prev) =>
+        prev.map((c) => (c.id === active.id ? { ...c, count: localCount } : c))
+      );
+      // Clear localStorage after successful log
+      localStorage.removeItem(`dhikr_${active.id}`);
+      // Reset UI
+      setLocalCount(0);
+    } catch (error) {
+      console.error("Failed to log dhikr:", error);
+    } finally {
+      setIsLogging(false);
     }
   };
 
@@ -273,8 +287,29 @@ export default function DhikrPage() {
                   </div>
 
                   {isComplete && (
-                    <div className="mt-4 p-3 rounded-xl bg-gold/20 border border-gold/30 text-gold text-xs font-semibold text-center">
-                      Target reached! MashaAllah!
+                    <div className="mt-4 space-y-3">
+                      <div className="p-3 rounded-xl bg-gold/20 border border-gold/30 text-gold text-xs font-semibold text-center">
+                        ✨ Target reached! MashaAllah! ✨
+                      </div>
+                      {user && (
+                        <button
+                          onClick={handleLogDhikr}
+                          disabled={isLogging}
+                          className="w-full px-4 py-3 rounded-xl bg-linear-to-r from-primary to-primary/80 text-white font-semibold text-sm hover:shadow-lg hover:from-primary/90 hover:to-primary/70 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {isLogging ? (
+                            <>
+                              <Loader2 size={16} className="animate-spin" />
+                              Logging...
+                            </>
+                          ) : (
+                            <>
+                              <Check size={16} />
+                              Log Dhikr Record
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
