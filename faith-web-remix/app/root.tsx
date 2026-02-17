@@ -15,11 +15,13 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import logoLight from "./welcome/logo-light.svg";
 
 const appName = "Faith";
 const appDescription = "A comprehensive Islamic companion app for prayers, Quran, dhikr, and spiritual growth.";
 const appUrl = "https://faith-app.com";
+
+// Moon SVG favicon (embedded inline)
+const moonFavicon = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%231B6B4E"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -28,28 +30,43 @@ export const links: Route.LinksFunction = () => [
     href: "https://fonts.gstatic.com",
     crossOrigin: "anonymous",
   },
-  { rel: "icon", href: logoLight, type: "image/svg+xml" },
+  { rel: "icon", href: moonFavicon, type: "image/svg+xml" },
 ];
 
-export const meta: Route.MetaFunction = () => [
-  { charset: "utf-8" },
-  { name: "viewport", content: "width=device-width, initial-scale=1" },
-  { name: "theme-color", content: "#1B6B4E" },
-  { name: "description", content: appDescription },
-  { name: "application-name", content: appName },
-  { name: "apple-mobile-web-app-capable", content: "yes" },
-  { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-  { name: "apple-mobile-web-app-title", content: appName },
-  { property: "og:type", content: "website" },
-  { property: "og:title", content: appName },
-  { property: "og:description", content: appDescription },
-  { property: "og:url", content: appUrl },
-  { property: "og:image", content: logoLight },
-  { name: "twitter:card", content: "summary_large_image" },
-  { name: "twitter:title", content: appName },
-  { name: "twitter:description", content: appDescription },
-  { name: "twitter:image", content: logoLight },
-];
+export const meta: Route.MetaFunction = ({ location }) => {
+  // Determine page-specific title based on route
+  const pathname = location.pathname;
+  let pageTitle = appName;
+
+  if (pathname.startsWith("/prayers")) pageTitle = "Faith | Prayers";
+  else if (pathname.startsWith("/quran")) pageTitle = "Faith | Quran";
+  else if (pathname.startsWith("/dhikr")) pageTitle = "Faith | Dhikr";
+  else if (pathname.startsWith("/calendar")) pageTitle = "Faith | Calendar";
+  else if (pathname.startsWith("/qibla")) pageTitle = "Faith | Qibla";
+  else if (pathname.startsWith("/names")) pageTitle = "Faith | Names";
+  else if (pathname.startsWith("/feelings")) pageTitle = "Faith | Feelings";
+  else if (pathname.startsWith("/auth")) pageTitle = "Faith | Auth";
+  else pageTitle = "Faith | Home";
+
+  return [
+    { title: pageTitle },
+    { charset: "utf-8" },
+    { name: "viewport", content: "width=device-width, initial-scale=1" },
+    { name: "theme-color", content: "#1B6B4E" },
+    { name: "description", content: appDescription },
+    { name: "application-name", content: appName },
+    { name: "apple-mobile-web-app-capable", content: "yes" },
+    { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+    { name: "apple-mobile-web-app-title", content: appName },
+    { property: "og:type", content: "website" },
+    { property: "og:title", content: pageTitle },
+    { property: "og:description", content: appDescription },
+    { property: "og:url", content: appUrl },
+    { name: "twitter:card", content: "summary" },
+    { name: "twitter:title", content: pageTitle },
+    { name: "twitter:description", content: appDescription },
+  ];
+};
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -58,9 +75,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#1B6B4E" />
-        <title>{appName}</title>
-        <link rel="icon" href={logoLight} type="image/svg+xml" />
-        <link rel="apple-touch-icon" href={logoLight} />
         <Meta />
         <Links />
       </head>
