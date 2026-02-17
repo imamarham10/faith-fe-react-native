@@ -17,6 +17,7 @@ import {
 import { prayerAPI, calendarAPI, namesAPI } from "~/services/api";
 import { getDailyInspiration } from "~/utils/dailyInspiration";
 import { FeelingsWidget } from "~/components/FeelingsWidget";
+import { useAuth } from "~/contexts/AuthContext";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -152,6 +153,7 @@ interface DailyName {
 }
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
   const [hijriDate, setHijriDate] = useState<string>("");
   const [todayEvents, setTodayEvents] = useState<any[]>([]);
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimings | null>(null);
@@ -747,33 +749,35 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="bg-hero-gradient text-white pattern-islamic">
-        <div className="container-faith py-14 md:py-20 text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold font-playfair mb-4 max-w-2xl mx-auto">
-            Begin Your Spiritual Journey Today
-          </h2>
-          <p className="text-white/70 text-base sm:text-lg max-w-lg mx-auto mb-8">
-            Create a free account to sync your progress, save bookmarks, and personalize your
-            experience.
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link
-              to="/auth/register"
-              className="inline-flex items-center gap-2 bg-white text-primary-dark font-semibold px-8 py-3.5 rounded-xl hover:bg-white/90 transition-all shadow-lg"
-            >
-              Get Started Free
-              <ArrowRight size={16} />
-            </Link>
-            <Link
-              to="/auth/login"
-              className="inline-flex items-center gap-2 bg-white/15 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-white/25 transition-all border border-white/20"
-            >
-              Sign In
-            </Link>
+      {/* CTA — only for guests (footer handles this for authenticated users) */}
+      {!isAuthenticated && (
+        <section className="bg-hero-gradient text-white pattern-islamic">
+          <div className="container-faith py-14 md:py-20 text-center">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold font-playfair mb-4 max-w-2xl mx-auto">
+              Begin Your Spiritual Journey Today
+            </h2>
+            <p className="text-white/70 text-base sm:text-lg max-w-lg mx-auto mb-8">
+              Create a free account to sync your progress, save bookmarks, and personalize your
+              experience.
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link
+                to="/auth/register"
+                className="inline-flex items-center gap-2 bg-white text-primary-dark font-semibold px-8 py-3.5 rounded-xl hover:bg-white/90 transition-all shadow-lg"
+              >
+                Get Started Free
+                <ArrowRight size={16} />
+              </Link>
+              <Link
+                to="/auth/login"
+                className="inline-flex items-center gap-2 bg-white/15 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-white/25 transition-all border border-white/20"
+              >
+                Sign In
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }
