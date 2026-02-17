@@ -20,8 +20,8 @@ const appName = "Faith";
 const appDescription = "A comprehensive Islamic companion app for prayers, Quran, dhikr, and spiritual growth.";
 const appUrl = "https://faith-app.com";
 
-// Moon SVG favicon (embedded inline)
-const moonFavicon = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%231B6B4E"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+// Favicon with rounded square and moon icon (matching header logo)
+const faviconSvg = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%231B6B4E"/><stop offset="100%" style="stop-color:%23157347"/></linearGradient></defs><rect x="0" y="0" width="180" height="180" rx="40" fill="url(%23grad)"/><text x="90" y="115" font-size="100" text-anchor="middle" fill="white" font-family="Arial, sans-serif">☽</text></svg>`;
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -30,7 +30,8 @@ export const links: Route.LinksFunction = () => [
     href: "https://fonts.gstatic.com",
     crossOrigin: "anonymous",
   },
-  { rel: "icon", href: moonFavicon, type: "image/svg+xml" },
+  { rel: "icon", href: faviconSvg, type: "image/svg+xml" },
+  { rel: "apple-touch-icon", href: faviconSvg },
 ];
 
 export const meta: Route.MetaFunction = ({ location }) => {
