@@ -1,27 +1,22 @@
 import { Link } from "react-router";
 import { Heart } from "lucide-react";
+import { useAuth } from "~/contexts/AuthContext";
 
-const footerLinks = [
-  {
-    title: "Features",
-    links: [
-      { label: "Prayer Times", to: "/prayers" },
-      { label: "Quran Reader", to: "/quran" },
-      { label: "Dhikr Counter", to: "/dhikr" },
-      { label: "Islamic Calendar", to: "/calendar" },
-      { label: "Qibla Finder", to: "/qibla" },
-    ],
-  },
-  {
-    title: "Account",
-    links: [
-      { label: "Sign In", to: "/auth/login" },
-      { label: "Create Account", to: "/auth/register" },
-    ],
-  },
+const featureLinks = [
+  { label: "Prayer Times", to: "/prayers" },
+  { label: "Quran Reader", to: "/quran" },
+  { label: "Dhikr Counter", to: "/dhikr" },
+  { label: "Islamic Calendar", to: "/calendar" },
+  { label: "Qibla Finder", to: "/qibla" },
+];
+
+const guestAccountLinks = [
+  { label: "Sign In", to: "/auth/login" },
+  { label: "Create Account", to: "/auth/register" },
 ];
 
 export default function Footer() {
+  const { isAuthenticated } = useAuth();
   return (
     <footer className="border-t border-border-light bg-surface-warm">
       <div className="container-faith py-12 md:py-16">
@@ -43,14 +38,33 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Link Groups */}
-          {footerLinks.map((group) => (
-            <div key={group.title}>
+          {/* Features Links */}
+          <div>
+            <h4 className="text-sm font-semibold text-text mb-4">
+              Features
+            </h4>
+            <ul className="space-y-2.5">
+              {featureLinks.map((link) => (
+                <li key={link.to}>
+                  <Link
+                    to={link.to}
+                    className="text-sm text-text-secondary hover:text-primary transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Account Links - Only show Sign In/Create Account if NOT authenticated */}
+          {!isAuthenticated && (
+            <div>
               <h4 className="text-sm font-semibold text-text mb-4">
-                {group.title}
+                Account
               </h4>
               <ul className="space-y-2.5">
-                {group.links.map((link) => (
+                {guestAccountLinks.map((link) => (
                   <li key={link.to}>
                     <Link
                       to={link.to}
@@ -62,7 +76,7 @@ export default function Footer() {
                 ))}
               </ul>
             </div>
-          ))}
+          )}
         </div>
 
         {/* Bottom Bar */}
