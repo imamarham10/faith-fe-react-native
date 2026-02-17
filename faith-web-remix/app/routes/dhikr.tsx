@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { dhikrAPI } from "~/services/api";
 import { useAuth } from "~/contexts/AuthContext";
-import type { DhikrCounter, DhikrGoal, DhikrStats, DhikrHistoryEntry } from "~/types";
+import type { DhikrCounter, DhikrGoal, DhikrStats, DhikrHistoryEntry, DhikrPhrase } from "~/types";
 
 const PRESET_DHIKR = [
   { name: "SubhanAllah", arabic: "سُبْحَانَ اللَّهِ", phrase: "SubhanAllah", target: 33 },
@@ -44,6 +44,8 @@ export default function DhikrPage() {
   const [goals, setGoals] = useState<DhikrGoal[]>([]);
   const [history, setHistory] = useState<DhikrHistoryEntry[]>([]);
   const [activeTab, setActiveTab] = useState<"goals" | "stats" | "history">("goals");
+  const [phrases, setPhrases] = useState<DhikrPhrase[]>([]);
+  const [phrasesLoading, setPhrasesLoading] = useState(false);
 
   const fetchAll = useCallback(async () => {
     if (!user) {
@@ -86,6 +88,19 @@ export default function DhikrPage() {
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  useEffect(() => {
+    if (showCreate && user && phrases.length === 0) {
+      setPhrasesLoading(true);
+      dhikrAPI.getPhrases()
+        .then((res) => {
+          const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+          setPhrases(data);
+        })
+        .catch(() => setPhrases([]))
+        .finally(() => setPhrasesLoading(false));
+    }
+  }, [showCreate, user, phrases.length]);
 
   const handleIncrement = () => {
     if (!active) return;
@@ -445,20 +460,40 @@ export default function DhikrPage() {
           <p className="text-xs text-text-muted mb-2 uppercase tracking-wider font-semibold">
             Quick Start
           </p>
-          <div className="grid grid-cols-2 gap-2 mb-5">
-            {PRESET_DHIKR.map((p) => (
-              <button
-                key={p.name}
-                onClick={() => handleCreate(p.name, p.phrase, p.target)}
-                className="card p-3 text-left hover:border-primary/30 transition-colors"
-              >
-                <p className="font-amiri text-lg text-text mb-0.5" dir="rtl">{p.arabic}</p>
-                <p className="text-sm font-semibold text-text">{p.name}</p>
-                <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1">
-                  <Target size={10} /> {p.target}x
-                </p>
-              </button>
-            ))}
+          <div className="grid grid-cols-2 gap-2 mb-5 min-h-[140px]">
+            {phrasesLoading ? (
+              <div className="col-span-2 flex items-center justify-center py-8">
+                <Loader2 className="animate-spin text-primary" size={20} />
+              </div>
+            ) : phrases.length > 0 ? (
+              phrases.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => handleCreate(p.phraseEnglish, p.phraseArabic, p.recommendedTarget || 33)}
+                  className="card p-3 text-left hover:border-primary/30 transition-colors"
+                >
+                  <p className="font-amiri text-lg text-text mb-0.5" dir="rtl">{p.phraseArabic}</p>
+                  <p className="text-sm font-semibold text-text">{p.phraseEnglish}</p>
+                  <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1">
+                    <Target size={10} /> {p.recommendedTarget || 33}x
+                  </p>
+                </button>
+              ))
+            ) : (
+              PRESET_DHIKR.map((p) => (
+                <button
+                  key={p.name}
+                  onClick={() => handleCreate(p.name, p.phrase, p.target)}
+                  className="card p-3 text-left hover:border-primary/30 transition-colors"
+                >
+                  <p className="font-amiri text-lg text-text mb-0.5" dir="rtl">{p.arabic}</p>
+                  <p className="text-sm font-semibold text-text">{p.name}</p>
+                  <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1">
+                    <Target size={10} /> {p.target}x
+                  </p>
+                </button>
+              ))
+            )}
           </div>
 
           <p className="text-xs text-text-muted mb-2 uppercase tracking-wider font-semibold">

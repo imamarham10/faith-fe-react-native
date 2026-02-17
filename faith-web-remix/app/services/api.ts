@@ -213,6 +213,9 @@ export const dhikrAPI = {
 
   getHistory: () =>
     api.get('/api/v1/islam/dhikr/history'),
+
+  getPhrases: () =>
+    api.get('/api/v1/islam/dhikr/phrases'),
 };
 
 export const qiblaAPI = {

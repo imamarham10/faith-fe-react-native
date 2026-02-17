@@ -177,3 +177,11 @@ export interface EmotionDetail extends Emotion {
   updatedAt: string;
   remedies: Remedy[];
 }
+
+export interface DhikrPhrase {
+  id: string;
+  phraseArabic: string;
+  phraseEnglish: string;
+  transliteration: string;
+  recommendedTarget?: number;
+}
