@@ -466,19 +466,23 @@ export default function DhikrPage() {
                 <Loader2 className="animate-spin text-primary" size={20} />
               </div>
             ) : phrases.length > 0 ? (
-              phrases.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => handleCreate(p.phraseEnglish, p.phraseArabic, p.recommendedTarget || 33)}
-                  className="card p-3 text-left hover:border-primary/30 transition-colors"
-                >
-                  <p className="font-amiri text-lg text-text mb-0.5" dir="rtl">{p.phraseArabic}</p>
-                  <p className="text-sm font-semibold text-text">{p.phraseEnglish}</p>
-                  <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1">
-                    <Target size={10} /> {p.recommendedTarget || 33}x
-                  </p>
-                </button>
-              ))
+              phrases.map((p) => {
+                const targetMap: Record<string, number> = { tasbih: 33, istighfar: 100, tawhid: 100, salawat: 33, istiadhah: 33, dua: 7, general: 33 };
+                const target = targetMap[p.category] || 33;
+                return (
+                  <button
+                    key={p.transliteration}
+                    onClick={() => handleCreate(p.transliteration, p.arabic, target)}
+                    className="card p-3 text-left hover:border-primary/30 transition-colors"
+                  >
+                    <p className="font-amiri text-lg text-text mb-0.5" dir="rtl">{p.arabic}</p>
+                    <p className="text-sm font-semibold text-text">{p.transliteration}</p>
+                    <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1">
+                      <Target size={10} /> {target}x
+                    </p>
+                  </button>
+                );
+              })
             ) : (
               PRESET_DHIKR.map((p) => (
                 <button

@@ -179,9 +179,8 @@ export interface EmotionDetail extends Emotion {
 }
 
 export interface DhikrPhrase {
-  id: string;
-  phraseArabic: string;
-  phraseEnglish: string;
+  arabic: string;
   transliteration: string;
-  recommendedTarget?: number;
+  english: string;
+  category: string;
 }
